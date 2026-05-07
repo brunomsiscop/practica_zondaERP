@@ -305,6 +305,25 @@
                                                     </div>
 
                                                     <div class="col-lg-2">
+                                                        <label class="form-label">Recurrente</label>
+                                                        <div class="input-group input-group-sm">
+                                                            <span class="input-group-text"><i
+                                                                    class="bi bi-arrow-repeat"></i></span>
+                                                            <select name="is_recurrent" class="form-select form-select-sm">
+                                                                <option value="">Todos</option>
+                                                                <option value="1"
+                                                                    @selected(request('is_recurrent') === '1')>
+                                                                    Si
+                                                                </option>
+                                                                <option value="0"
+                                                                    @selected(request('is_recurrent') === '0')>
+                                                                    No
+                                                                </option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="col-lg-2">
                                                         <label class="form-label">Rango de fechas</label>
                                                         <div class="input-group input-group-sm">
                                                             <span class="input-group-text"><i

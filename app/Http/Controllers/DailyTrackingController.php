@@ -583,6 +583,15 @@ class DailyTrackingController extends Controller
             }
         }
 
+        if ($request->filled('is_recurrent')) {
+            $isRecurrent = $request->input('is_recurrent');
+            if ($isRecurrent === '1') {
+                $query->where('is_recurrent', true);
+            } elseif ($isRecurrent === '0') {
+                $query->where('is_recurrent', false);
+            }
+        }
+
         if ($request->filled('date_range')) {
             $range = explode(' - ', (string) $request->date_range);
             if (count($range) === 2) {
