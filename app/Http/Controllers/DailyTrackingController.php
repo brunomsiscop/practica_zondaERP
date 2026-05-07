@@ -357,6 +357,8 @@ class DailyTrackingController extends Controller
             'Clientes Domestico',
             'Clientes Comercial',
             'Clientes Industrial',
+            'Clientes Recurrentes',
+            'Clientes Nuevos',
             //'Clientes comerciales nuevos',
         ];
 
@@ -393,6 +395,8 @@ class DailyTrackingController extends Controller
                 //$daily_trackings->where('customer_type', 'comercial')->where('created_at', '>=', Carbon::now()->subDays(30))->count(), // Clientes comerciales nuevos
                 //$daily_trackings->where('customer_type', 'industrial')->where('created_at', '>=', Carbon::now()->subDays(30))->count(), // Clientes industriales nuevos
                 //$daily_trackings->where('customer_type', 'domestico')->where('created_at', '>=', Carbon::now()->subDays(30))->count(), // Clientes domésticos nuevos
+                $daily_trackings->where('is_recurrent', true)->count(), // Clientes recurrentes
+                $daily_trackings->where('is_recurrent', false)->count(), // Clientes nuevos
             ];
 
             foreach ($contactMethods as $method) {
