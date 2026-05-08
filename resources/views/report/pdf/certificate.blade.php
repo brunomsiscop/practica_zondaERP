@@ -590,9 +590,9 @@
                         @if (!empty($health_officer_signature))
                             <img src="{{ $health_officer_signature }}" class="signature-image" alt="Firma">
                         @endif
-                        <div class="signature-title">Nombre y firma del responsable</div>
+                        <div class="signature-title">Nombre y firma del responsable sanitario</div>
                         <div class="signature-name">Jacobo Samuel Quintero Curiel</div>
-                        <div class="signature-rfc">RFC: {{ $technician['rfc'] }}</div>
+                        <div class="signature-rfc"></div>
                     </div>
                 </td>
 
