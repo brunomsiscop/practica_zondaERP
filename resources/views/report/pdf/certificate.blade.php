@@ -174,7 +174,7 @@
         }
 
         .signature-cell {
-            width: 33%;
+            width: 50%;
             padding: 15px 10px;
             vertical-align: bottom;
             /* Solo para debug (puedes quitarlo después) */
@@ -581,6 +581,18 @@
                         <div class="signature-name">{{ $customer['signed_by'] ?? '-' }}</div>
                         <div class="signature-name">{{ $customer['name'] ?? '-' }}</div>
                         <div class="signature-rfc">RFC: {{ $customer['rfc'] ?? '-' }}</div>
+                    </div>
+                </td>
+
+                <!-- Firma Ingeniero -->
+                <td class="signature-cell">
+                    <div class="signature-container">
+                        @if (!empty($technician['signature_base64']))
+                            <img src="{{ $technician['signature_base64'] }}" class="signature-image" alt="Firma">
+                        @endif
+                        <div class="signature-title">Nombre y firma del responsable</div>
+                        <div class="signature-name">Jacobo Samuel Quintero Curiel</div>
+                        <!--div class="signature-rfc">RFC: {{ $technician['rfc'] }}</div-->
                     </div>
                 </td>
 
