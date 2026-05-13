@@ -593,7 +593,7 @@
                     <option value="">Seleccionar técnico...</option>
                     @foreach ($technicians as $technician)
                         <option value="{{ $technician->id }}" @selected(old('technician_id') == $technician->id)>
-                            {{ $technician->user->name }}
+                            {{ $technician->user->name ?? '-' }}
                         </option>
                     @endforeach
                 </select>
