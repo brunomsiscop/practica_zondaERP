@@ -43,7 +43,8 @@ class DailyTrackingController extends Controller
 {
     public function index(Request $request)
     {
-        $navigation = $this->navigation();
+        dd('Daily Tracking index - Implementar vista y lógica de filtrado');
+        /*$navigation = $this->navigation();
         $perPage = (int) $request->integer('per_page', 15);
         if (!in_array($perPage, [15, 25, 50, 100], true)) {
             $perPage = 15;
@@ -73,6 +74,7 @@ class DailyTrackingController extends Controller
             'nav' => 'd',
             'technicians' => $technicians,
         ]));
+        */
     }
 
     public function generateCustomerCode(string $name, int $length = 3, string $model = Customer::class): string
