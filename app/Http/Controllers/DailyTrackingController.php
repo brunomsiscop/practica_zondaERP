@@ -64,8 +64,9 @@ class DailyTrackingController extends Controller
             ->paginate($perPage)
             ->withQueryString();
 
-        $technicians = Technician::with('user')->get();
-*/
+        $technicians = Technician::with('user')->get();*/
+
+        dd(DailyTrackingStatus::cases());
 
         return view('crm.daily-tracking.index', array_merge($this->formData(), [
             'navigation' => $navigation,
