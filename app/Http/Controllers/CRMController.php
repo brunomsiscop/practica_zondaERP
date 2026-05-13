@@ -173,7 +173,12 @@ class CRMController extends Controller
     public function __construct()
     {
         $this->navigation = [
-            'Agenda' => route('crm.agenda'),
+            'Agenda' => [
+                'Calendario' => route('crm.agenda'),
+                'Seguimientos' => route('crm.tracking'),
+                'Cotizaciones' => route('crm.quotation'),
+                'Actividades diarias' => route('crm.daily-tracking.index'),
+            ],
             'Clientes' => route('customer.index'),
             'Sedes' => route('customer.index.sedes'),
             'Clientes potenciales' => Route('customer.index.leads'),

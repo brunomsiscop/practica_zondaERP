@@ -14,17 +14,24 @@ use App\Http\Requests\StoreDailyTrackingRequest;
 use App\Http\Requests\UpdateDailyTrackingRequest;
 use App\Http\Requests\ImportExcelRequest;
 use App\Models\Branch;
+use App\Models\Tracking;
+use App\Models\CompanyCategory;
 use App\Models\Customer;
 use App\Models\DailyTracking;
+use App\Models\Lead;
 use App\Models\Service;
+use App\Models\Order;
+use App\Models\OrderService;
+use App\Models\OrderTechnician;
 use App\Models\ServiceType;
+use App\Models\Technician;
 use App\Services\ExcelImportService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use LaravelDaily\LaravelCharts\Classes\LaravelChart;
@@ -57,12 +64,47 @@ class DailyTrackingController extends Controller
             ->paginate($perPage)
             ->withQueryString();
 
+        $technicians = Technician::with('user')->get();
+
         return view('crm.daily-tracking.index', array_merge($this->formData(), [
             'navigation' => $navigation,
             'dailyTrackings' => $dailyTrackings,
             'statusOptions' => DailyTrackingStatus::cases(),
             'nav' => 'd',
+            'technicians' => $technicians,
         ]));
+    }
+
+    public function generateCustomerCode(string $name, int $length = 3, string $model = Customer::class): string
+    {
+        $name = strtoupper(preg_replace('/[^A-Za-z]/', '', $name));
+        $prefix = substr($name, 0, rand(2, 3));
+        $randomPart = Str::upper(Str::random($length));
+        $code = $prefix . $randomPart;
+        $originalCode = $code;
+        $counter = 1;
+
+        while ($model::where('code', $code)->exists()) {
+            $code = $originalCode . $counter;
+            $counter++;
+        }
+
+        return $code;
+    }
+
+    public function suggestCustomers(Request $request)
+    {
+        $query = $request->input('query', '');
+        if (strlen($query) < 2) {
+            return response()->json([]);
+        }
+
+        $suggestions = Customer::query()
+            ->where('name', 'like', '%' . $query . '%')
+            ->limit(10)
+            ->get(['id', 'name', 'phone', 'city', 'address']); // agrega los campos que necesites
+
+        return response()->json($suggestions);
     }
 
     public function charts(Request $request)
@@ -442,20 +484,134 @@ class DailyTrackingController extends Controller
         return view('crm.daily-tracking.create', $this->formData());
     }
 
+    private function generateFolio(?Customer $customer)
+    {
+        $order = Order::query();
+        if ($customer == null) {
+            $count_order = $order->count();
+            return 'SEG' . str_pad($count_order + 1, 4, '0', STR_PAD_LEFT);
+        }
+
+        $count_order = $order->where('customer_id', $customer->id)->count();
+        return $customer->code . '.SEG-' . str_pad($count_order + 1, 4, '0', STR_PAD_LEFT);
+    }
+
     public function store(StoreDailyTrackingRequest $request)
     {
+        $customer = null;
+        $order = null;
+        $message = null;
+
         $data = $request->validated();
+        $conversion = $data['conversion'] ?? null;
 
         if (isset($data['status'])) {
             $data['status_updated_at'] = now();
             $data['status_updated_by'] = Auth::id();
         }
 
+        if ($data['customer_id'] && $conversion == 'suggested') {
+            $customer = Customer::find($data['customer_id']);
+            $message = 'Cliente sugerido seleccionado: ' . ($customer ? $customer->name : 'Cliente no encontrado');
+        }
+
+        if ($conversion == 'client' && !$customer) {
+            $customer = Customer::create([
+                'name' => $data['customer_name'],
+                'service_type_id' => $data['customer_type'] == DailyTrackingCustomerType::DOMESTICO ? 1 : ($data['customer_type'] == DailyTrackingCustomerType::COMERCIAL ? 2 : 3),
+                'branch_id' => 1,
+                'city' => $data['city'],
+                'state' => $data['state'],
+                'address' => $data['address'],
+                'phone' => $data['phone'],
+                'zip_code' => '00000',
+                'status' => 1,
+                'administrative_id' => Auth::id(),
+                'company_category_id' => $data['customer_category'] ?? null,
+                'code' => $this->generateCustomerCode($data['customer_name']),
+            ]);
+
+            $message = 'Nuevo cliente creado: ' . $customer->name;
+        }
+
+
+        if ($data['generate_order'] && $customer) {
+            $folio = $this->generateFolio($customer);
+
+            $order = Order::create([
+                'administrative_id' => Auth::id(),
+                'customer_id' => $customer?->id,
+                'service_id' => $data['service_id'],
+                'status_id' => 1, // Ajusta este valor según tus estados
+                'start_time' => $data['service_time'],
+                'programmed_date' => $data['service_date'],
+                'folio' => $folio,
+            ]);
+
+            OrderTechnician::create([
+                'order_id' => $order->id,
+                'technician_id' => $data['technician_id'] ?? null, // Asigna un técnico si es necesario
+            ]);
+
+            OrderService::create([
+                'order_id' => $order->id,
+                'service_id' => $data['service_id'],
+            ]);
+
+            $message .= ' y orden generada con folio: ' . $folio;
+
+        } elseif ($data['generate_order'] && !$customer) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->withErrors(['customer_id' => 'No se puede generar una orden sin un cliente asociado. Por favor, selecciona un cliente, convierta a cliente o desactiva la opción de generar orden.']);
+        }
+
+        if ($conversion == 'lead' && !$customer) {
+            $customer = new Lead([
+                'name' => $data['customer_name'],
+                'service_type_id' => $data['customer_type'] == DailyTrackingCustomerType::DOMESTICO ? 1 : ($data['customer_type'] == DailyTrackingCustomerType::COMERCIAL ? 2 : 3),
+                'branch_id' => 1,
+                'city' => $data['city'],
+                'state' => $data['state'],
+                'address' => $data['address'],
+                'phone' => $data['phone'],
+                'zip_code' => '00000',
+                'contact_medium' => DailyTrackingContactMethod::LLAMADA->value,
+                'status' => 0, // Lead
+                'administrative_id' => Auth::id(),
+                'company_category_id' => $data['customer_category'] ?? null,
+            ]);
+
+            $message .= 'Nuevo lead creado: ' . $customer->name;
+        }
+
+        if ($conversion != null && $data['register_follow_up']) {
+            Tracking::create([
+                'trackable_id' => $customer?->id,
+                'trackable_type' => $conversion === 'client' ? Customer::class : Lead::class,
+                'user_id' => Auth::id(),
+                'service_id' => $data['service_id'] ?? null,
+                'cost' => $data['quoted_amount'] ?? null,
+                'order_id' => $order?->id,
+                'next_date' => $data['follow_up_date'] ?? null,
+                'title' => 'Seguimiento diario: ' . ($data['customer_name'] ?? 'Cliente sin nombre'),
+                'description' => 'Registro diario creado con conversión a ' . ($conversion === 'client' ? 'cliente' : 'lead') . ($order ? ' y orden #' . $order->id : '') . ' por el usuario ' . Auth::user()->name . '. Detalles adicionales: ' . ($data['notes'] ?? 'Sin notas adicionales.'),
+                'status' => 'active',
+            ]);
+
+            $message .= ' y seguimiento creado para el ' . ($conversion === 'client' ? 'cliente' : 'lead') . 'ligado a la orden #' . $order?->id;
+        }
+
+        $data['customer_category'] = CompanyCategory::find($data['customer_category'])->category ?? null;
+        $data['order_id'] = $order?->id;
         DailyTracking::create($data);
+
+        $message .= ' Registro diario creado correctamente.';
 
         return redirect()
             ->route('crm.daily-tracking.index')
-            ->with('success', 'Registro diario creado correctamente.');
+            ->with('success', $message);
     }
 
     public function show(DailyTracking $dailyTracking)
@@ -879,7 +1035,12 @@ class DailyTrackingController extends Controller
     private function navigation(): array
     {
         return [
-            'Agenda' => route('crm.agenda'),
+            'Agenda' => [
+                'Calendario' => route('crm.agenda'),
+                'Seguimientos' => route('crm.tracking'),
+                'Cotizaciones' => route('crm.quotation'),
+                'Actividades diarias' => route('crm.daily-tracking.index'),
+            ],
             'Clientes' => route('customer.index'),
             'Sedes' => route('customer.index.sedes'),
             'Clientes potenciales' => route('customer.index.leads'),
@@ -917,6 +1078,7 @@ class DailyTrackingController extends Controller
             'customerContactMediumOptions' => $this->customerContactMediumOptions(),
             'states' => is_array($states) ? $states : [],
             'cities' => is_array($cities) ? $cities : [],
+            'customerCategories' => CompanyCategory::query()->select('id', 'category')->orderBy('category')->get(),
         ];
     }
 
@@ -929,20 +1091,6 @@ class DailyTrackingController extends Controller
             'email' => 'Correo electronico',
             'flyer' => 'Volanteo fisico',
         ];
-    }
-
-    private function generateCustomerCode(string $name): string
-    {
-        $prefix = strtoupper(preg_replace('/[^A-Z]/', '', substr(preg_replace('/[^A-Za-z]/', '', $name), 0, 3)));
-        if ($prefix === '') {
-            $prefix = 'CUS';
-        }
-
-        do {
-            $code = $prefix . random_int(1000, 9999);
-        } while (Customer::where('code', $code)->exists());
-
-        return $code;
     }
 
     public function exportCharts(Request $request)

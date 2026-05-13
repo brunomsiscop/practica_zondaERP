@@ -282,33 +282,6 @@
         'icon' => 'bi-calendar-week',
     ])
     <div class="container-fluid font-small p-3">
-        <ul class="nav nav-tabs mb-3">
-            <li class="nav-item">
-                <a class="nav-link {{ $nav == 'c' ? 'active' : '' }}" aria-current="page" href="{{ route('crm.agenda') }}">
-                    <i class="bi bi-calendar-week"></i>
-                    <span>Calendario</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link {{ $nav == 't' ? 'active' : '' }}" href="{{ route('crm.tracking') }}">
-                    <i class="bi bi-arrow-repeat"></i>
-                    <span>Seguimientos</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link {{ $nav == 'q' ? 'active' : '' }}" href="{{ route('crm.quotation') }}">
-                    <i class="bi bi-receipt"></i>
-                    <span>Cotizaciones</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link {{ $nav == 'd' ? 'active' : '' }}" href="{{ route('crm.daily-tracking.index') }}">
-                    <i class="bi bi-clock-history"></i>
-                    <span>Actividades diarias</span>
-                </a>
-            </li>
-        </ul>
-
         <div class="row">
             <!-- Sidebar de Filtros -->
             <div class="col-lg-3 col-md-4 mb-3">

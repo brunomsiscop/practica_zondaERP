@@ -20,40 +20,11 @@
      ])
      <div class="container-fluid font-small p-3">
          <div class="overflow-auto w-100">
-             <ul class="nav nav-tabs border rounded-top ">
-                 <li class="nav-item">
-                     <a class="nav-link {{ $nav == 'c' ? 'active' : '' }}" aria-current="page"
-                         href="{{ route('crm.agenda') }}">
-                         <i class="bi bi-calendar-week"></i>
-                         <span>Calendario</span>
-                     </a>
-                 </li>
-                 <li class="nav-item">
-                     <a class="nav-link {{ $nav == 't' ? 'active' : '' }}" href="{{ route('crm.tracking') }}">
-                         <i class="bi bi-arrow-repeat"></i>
-                         <span>Seguimientos</span>
-                     </a>
-                 </li>
-                 <li class="nav-item">
-                     <a class="nav-link {{ $nav == 'q' ? 'active' : '' }}" href="{{ route('crm.quotation') }}">
-                         <i class="bi bi-receipt"></i>
-                         <span>Cotizaciones</span>
-                     </a>
-                 </li>
-                 <li class="nav-item">
-                     <a class="nav-link {{ $nav == 'd' ? 'active' : '' }}" href="{{ route('crm.daily-tracking.index') }}">
-                         <i class="bi bi-clock-history"></i>
-                         <span>Actividades diarias</span>
-                     </a>
-                 </li>
-             </ul>
              <table class="table table-bordered table-sm">
-                 <caption class="p-3 text-dark bg-white caption-top">
+                 <caption class="p-3 text-dark bg-white border caption-top">
                      <form action="{{ route('crm.tracking') }}" method="GET">
-                         @csrf
-                         <div class="row g-2 mb-0">
-                             <!-- Cliente/Lead -->
-                             <div class="col-lg-4">
+                         <div class="row g-2 mb-2">
+                             <div class="col-lg-3">
                                  <label class="form-label" for="trackable-id">Nombre del cliente/lead</label>
                                  <div class="input-group input-group-sm mb-3">
                                      <span class="input-group-text" id="basic-addon1"><i
@@ -87,9 +58,9 @@
                                  </div>
                              </div>
 
-                             <div class="col-lg-1">
-                                 <label for="signature_status" class="form-label">Dirección</label>
-                                 <div class="input-group input-group-sm mb-3">
+                             <div class="col-lg-3">
+                                 <label for="signature_status" class="form-label">Ordenar / Mostrar</label>
+                                 <div class="input-group input-group-sm">
                                      <span class="input-group-text" id="basic-addon1"><i
                                              class="bi bi-arrow-down-up"></i></span>
                                      <select class="form-select form-select-sm" id="direction" name="direction">
@@ -100,12 +71,6 @@
                                              ASC
                                          </option>
                                      </select>
-                                 </div>
-                             </div>
-
-                             <div class="col-lg-1">
-                                 <label for="order_type" class="form-label">Total</label>
-                                 <div class="input-group input-group-sm mb-3">
                                      <span class="input-group-text" id="basic-addon1"><i class="bi bi-list-ol"></i></span>
                                      <select class="form-select form-select-sm" id="size" name="size">
                                          <option value="25" {{ request('size') == 25 ? 'selected' : '' }}>25
@@ -122,33 +87,52 @@
                                  </div>
                              </div>
 
-                             <!-- Botón Buscar -->
-                             <div class="d-flex justify-content-end gap-2">
-                                 <a href="{{ route('crm.tracking.export', request()->query()) }}"
-                                     class="btn btn-success btn-sm export-btn" data-export-type="Excel">
-                                     <span class="btn-content">
-                                         <i class="bi bi-file-earmark-excel"></i> Exportar Excel
-                                     </span>
-                                     <span class="btn-loading d-none">
-                                         <span class="spinner-border spinner-border-sm" role="status"
-                                             aria-hidden="true"></span>
-                                         Exportando...
-                                     </span>
-                                 </a>
-                                 <a href="{{ route('crm.tracking.export.pdf', request()->query()) }}"
-                                     class="btn btn-danger btn-sm export-btn" data-export-type="PDF">
-                                     <span class="btn-content">
-                                         <i class="bi bi-file-earmark-pdf"></i> Exportar PDF
-                                     </span>
-                                     <span class="btn-loading d-none">
-                                         <span class="spinner-border spinner-border-sm" role="status"
-                                             aria-hidden="true"></span>
-                                         Exportando...
-                                     </span>
-                                 </a>
-                                 <button type="submit" class="btn btn-primary btn-sm" id="search" name="search">
-                                     <i class="bi bi-funnel-fill"></i> Buscar
-                                 </button>
+                             <div class="row justify-content-end g-3 m-0 p-0">
+                                 <!-- Dropdown Exportar -->
+                                 <div class="col-lg-1 col-4">
+                                     <div class="dropdown w-100">
+                                         <button class="btn btn-success btn-sm w-100 dropdown-toggle" type="button"
+                                             data-bs-toggle="dropdown" aria-expanded="false">
+                                             <i class="bi bi-download"></i> Exportar
+                                         </button>
+                                         <ul class="dropdown-menu dropdown-menu-end">
+                                             <li>
+                                                 <a href="{{ route('crm.tracking.export', request()->query()) }}"
+                                                     class="dropdown-item export-btn" data-export-type="Excel">
+                                                     <span class="btn-content">
+                                                         <i class="bi bi-file-earmark-excel text-success"></i> Excel
+                                                     </span>
+                                                     <span class="btn-loading d-none">
+                                                         <span class="spinner-border spinner-border-sm" role="status"
+                                                             aria-hidden="true"></span>
+                                                         Exportando...
+                                                     </span>
+                                                 </a>
+                                             </li>
+                                             <li>
+                                                 <a href="{{ route('crm.tracking.export.pdf', request()->query()) }}"
+                                                     class="dropdown-item export-btn" data-export-type="PDF">
+                                                     <span class="btn-content">
+                                                         <i class="bi bi-file-earmark-pdf text-danger"></i> PDF
+                                                     </span>
+                                                     <span class="btn-loading d-none">
+                                                         <span class="spinner-border spinner-border-sm" role="status"
+                                                             aria-hidden="true"></span>
+                                                         Exportando...
+                                                     </span>
+                                                 </a>
+                                             </li>
+                                         </ul>
+                                     </div>
+                                 </div>
+
+                                 <!-- Buscar -->
+                                 <div class="col-lg-1 col-4">
+                                     <button type="submit" class="btn btn-primary btn-sm w-100" id="search"
+                                         name="search">
+                                         <i class="bi bi-funnel-fill"></i> Buscar
+                                     </button>
+                                 </div>
                              </div>
                          </div>
 
@@ -171,7 +155,7 @@
                      </tr>
                  </thead>
                  <tbody>
-                     @foreach ($trackings as $tracking)
+                     @forelse ($trackings as $tracking)
                          @php
                              $range = json_decode($tracking->range);
                          @endphp
@@ -241,7 +225,11 @@
                                  </a>
                              </td>
                          </tr>
-                     @endforeach
+                     @empty
+                         <tr>
+                             <td colspan="11" class="text-center text-danger"> Sin cotizaciones agregadas </td>
+                         </tr>
+                     @endforelse
                  </tbody>
              </table>
          </div>

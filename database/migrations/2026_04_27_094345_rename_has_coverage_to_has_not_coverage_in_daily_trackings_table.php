@@ -11,9 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('daily_trackings', function (Blueprint $table) {
-            $table->renameColumn('has_coverage', 'has_not_coverage');
-        });
+        if (
+            Schema::hasColumn('daily_trackings', 'has_coverage') &&
+            !Schema::hasColumn('daily_trackings', 'has_not_coverage')
+        ) {
+
+            Schema::table('daily_trackings', function (Blueprint $table) {
+
+                $table->renameColumn('has_coverage', 'has_not_coverage');
+
+            });
+
+        }
     }
 
     /**
@@ -21,8 +30,17 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('daily_trackings', function (Blueprint $table) {
-            $table->renameColumn('has_not_coverage', 'has_coverage');
-        });
+        if (
+            Schema::hasColumn('daily_trackings', 'has_not_coverage') &&
+            !Schema::hasColumn('daily_trackings', 'has_coverage')
+        ) {
+
+            Schema::table('daily_trackings', function (Blueprint $table) {
+
+                $table->renameColumn('has_not_coverage', 'has_coverage');
+
+            });
+
+        }
     }
 };

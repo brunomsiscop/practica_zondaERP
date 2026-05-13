@@ -197,6 +197,8 @@ Route::prefix('crm')->name('crm.')->middleware(['auth', 'single.session', 'can:i
     Route::post('/daily-tracking/{dailyTracking}/store-customer', [DailyTrackingController::class, 'storeCustomerFromTracking'])
         ->name('daily-tracking.store-customer');
     Route::resource('/daily-tracking', DailyTrackingController::class);
+
+    Route::get('/daily-trackings/suggest-customers', [DailyTrackingController::class, 'suggestCustomers'])->name('daily-tracking.suggest-customers');
 });
 
 

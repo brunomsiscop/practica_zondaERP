@@ -19,6 +19,7 @@ class DailyTracking extends Model
 
     protected $fillable = [
         'service_id',
+        'order_id', 
         'customer_name',
         'phone',
         'customer_type',

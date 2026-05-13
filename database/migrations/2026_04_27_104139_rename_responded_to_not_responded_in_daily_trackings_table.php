@@ -11,9 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('daily_trackings', function (Blueprint $table) {
-            $table->renameColumn('responded', 'not_responded');
-        });
+        if (
+            Schema::hasColumn('daily_trackings', 'responded') &&
+            !Schema::hasColumn('daily_trackings', 'not_responded')
+        ) {
+
+            Schema::table('daily_trackings', function (Blueprint $table) {
+
+                $table->renameColumn('responded', 'not_responded');
+
+            });
+
+        }
     }
 
     /**
@@ -21,8 +30,17 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('daily_trackings', function (Blueprint $table) {
-            $table->renameColumn('not_responded', 'responded');
-        });
+        if (
+            Schema::hasColumn('daily_trackings', 'not_responded') &&
+            !Schema::hasColumn('daily_trackings', 'responded')
+        ) {
+
+            Schema::table('daily_trackings', function (Blueprint $table) {
+
+                $table->renameColumn('not_responded', 'responded');
+
+            });
+
+        }
     }
 };

@@ -12,7 +12,7 @@ return new class extends Migration {
         }
 
         Schema::table('daily_trackings', function (Blueprint $table) {
-            $table->boolean('is_recurrent')->default(false)->after('responded');
+            $table->boolean('is_recurrent')->default(false)->after('not_responded');
         });
     }
 

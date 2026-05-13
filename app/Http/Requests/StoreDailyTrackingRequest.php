@@ -27,16 +27,16 @@ class StoreDailyTrackingRequest extends FormRequest
             'customer_name' => ['required', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
             'customer_type' => ['required', new Enum(DailyTrackingCustomerType::class)],
-            'customer_category' => ['nullable', 'string', 'max:255'],
+            'customer_category' => ['nullable', 'integer', Rule::exists('company_category', 'id')],
             'state' => ['nullable', 'string', 'max:255'],
             'city' => ['nullable', 'string', 'max:255'],
             'address' => ['nullable', 'string'],
             'contact_method' => ['required', new Enum(DailyTrackingContactMethod::class)],
             'status' => ['required', new Enum(DailyTrackingStatus::class)],
-            'not_responded' => ['nullable', 'boolean'],
-            'is_recurrent' => ['nullable', 'boolean'],
             'quoted' => ['required', new Enum(DailyTrackingQuoted::class)],
             'closed' => ['required', new Enum(DailyTrackingClosed::class)],
+            'not_responded' => ['nullable', 'boolean'],
+            'is_recurrent' => ['nullable', 'boolean'],
             'has_not_coverage' => ['nullable', 'boolean'],
             'quoted_amount' => ['nullable', 'decimal:0,2'],
             'billed_amount' => ['nullable', 'decimal:0,2'],
@@ -50,6 +50,18 @@ class StoreDailyTrackingRequest extends FormRequest
             'service_time' => ['nullable', 'date_format:H:i'],
             'focused_pest' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
+            'generate_order' => ['nullable', 'boolean'],
+            'register_follow_up' => ['nullable', 'boolean'],
+            'conversion' => [
+                'nullable',
+                Rule::in([
+                    'client',
+                    'lead',
+                    'suggested'
+                ])
+            ],
+            'technician_id' => ['nullable', Rule::exists('technician', 'id')],
+            'customer_id' => ['nullable', Rule::exists('customer', 'id')],
         ];
     }
 
@@ -61,10 +73,22 @@ class StoreDailyTrackingRequest extends FormRequest
             'not_responded' => $this->boolean('not_responded'),
             'is_recurrent' => $this->boolean('is_recurrent'),
             'has_not_coverage' => $this->boolean('has_not_coverage'),
-            'quoted_amount' => $this->input('quoted_amount') !== '' ? $this->input('quoted_amount') : null,
-            'billed_amount' => $this->input('billed_amount') !== '' ? $this->input('billed_amount') : null,
-            'payment_method' => $this->input('payment_method') !== '' ? $this->input('payment_method') : null,
-            'service_time' => is_string($serviceTime) && strlen($serviceTime) >= 5 ? substr($serviceTime, 0, 5) : $serviceTime,
+
+            'quoted_amount' => $this->input('quoted_amount') !== ''
+                ? $this->input('quoted_amount')
+                : null,
+
+            'billed_amount' => $this->input('billed_amount') !== ''
+                ? $this->input('billed_amount')
+                : null,
+
+            'payment_method' => $this->input('payment_method') !== ''
+                ? $this->input('payment_method')
+                : null,
+
+            'service_time' => is_string($serviceTime) && strlen($serviceTime) >= 5
+                ? substr($serviceTime, 0, 5)
+                : $serviceTime,
         ]);
     }
 }
