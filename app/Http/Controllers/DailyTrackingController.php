@@ -43,7 +43,6 @@ class DailyTrackingController extends Controller
 {
     public function index(Request $request)
     {
-        dd('Daily Tracking index - Implementar vista y lógica de filtrado');
         $navigation = $this->navigation();
         $perPage = (int) $request->integer('per_page', 15);
         if (!in_array($perPage, [15, 25, 50, 100], true)) {
