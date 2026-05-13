@@ -44,13 +44,13 @@ class DailyTrackingController extends Controller
     public function index(Request $request)
     {
         dd('Daily Tracking index - Implementar vista y lógica de filtrado');
-        /*$navigation = $this->navigation();
+        $navigation = $this->navigation();
         $perPage = (int) $request->integer('per_page', 15);
         if (!in_array($perPage, [15, 25, 50, 100], true)) {
             $perPage = 15;
         }
 
-        $sortableColumns = ['service_date', 'customer_name', 'status', 'created_at'];
+        /*$sortableColumns = ['service_date', 'customer_name', 'status', 'created_at'];
         $sort = $request->get('sort', 'created_at');
         if (!in_array($sort, $sortableColumns, true)) {
             $sort = 'created_at';
@@ -66,15 +66,15 @@ class DailyTrackingController extends Controller
             ->withQueryString();
 
         $technicians = Technician::with('user')->get();
+*/
 
         return view('crm.daily-tracking.index', array_merge($this->formData(), [
             'navigation' => $navigation,
-            'dailyTrackings' => $dailyTrackings,
+            'dailyTrackings' => [],
             'statusOptions' => DailyTrackingStatus::cases(),
             'nav' => 'd',
-            'technicians' => $technicians,
+            'technicians' => [],
         ]));
-        */
     }
 
     public function generateCustomerCode(string $name, int $length = 3, string $model = Customer::class): string
