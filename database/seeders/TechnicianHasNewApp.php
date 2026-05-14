@@ -15,9 +15,9 @@ class TechnicianHasNewApp extends Seeder
     {
 
         $user_location = UserLocation::select('user_id', 'created_at')
-            ->groupBy('user_id', 'created_at')
+            ->groupBy('user_id')
             ->get();
-            
+
         foreach ($user_location as $i => $location) {
             echo "| Nombre: $location->user->name | Actualizado: $location->created_at |" . PHP_EOL;
         }
