@@ -654,8 +654,8 @@ class OrderController extends Controller
         // DEBUG: Log inicio del update
         Log::info("OrderController@update - Iniciando actualización", [
             'order_id' => $id,
-            'user_id' => auth()->id(),
-            'user_type_id' => auth()->user()->type_id,
+            'user_id' => Auth::id(),
+            'user_type_id' => Auth::user()->type_id,
             'request_size' => strlen(json_encode($request->all()))
         ]);
 
