@@ -30,23 +30,79 @@
         .border.rounded.shadow-sm {
             background-color: #fff;
         }
+
+        /* ── Desktop: sidebar siempre visible ── */
+        @media (min-width: 768px) {
+            #sidebar {
+                display: flex !important;
+                flex-direction: column;
+                height: 100%;
+                overflow-y: auto;
+            }
+        }
+
+        /* ── Móvil: sidebar como drawer oculto ── */
+        @media (max-width: 767.98px) {
+            #sidebar {
+                position: fixed !important;
+                top: 0;
+                left: -240px;
+                /* oculto fuera de pantalla */
+                width: 120px !important;
+                min-width: 120px !important;
+                height: 100vh !important;
+                z-index: 1050;
+                transition: left 0.3s ease;
+                overflow-y: auto;
+            }
+
+            #sidebar.active {
+                left: 0;
+                /* visible al abrir */
+            }
+        }
+
+        /* ── Overlay oscuro detrás del drawer ── */
+        #sidebarOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1040;
+        }
+
+        #sidebarOverlay.active {
+            display: block;
+        }
     </style>
 </head>
 
 <body class="m-0 d-flex flex-column" style="height: 100vh;">
     @auth
         @include('layouts.header')
+
         <div class="d-flex flex-column flex-md-row flex-grow-1" style="overflow: hidden;">
-            <!-- Navbar primero en móvil, luego a la izquierda en desktop -->
+
             @unless (request()->is('dashboard', 'dashboard/*'))
-                <div class="order-md-1 col-sm-auto col-lg-1 p-0 shadow bg-gradiant-navbar">
+                <!-- ✅ SIDEBAR -->
+                <div class="order-md-1 p-0 shadow bg-gradiant-navbar" id="sidebar"
+                    style="width: 120px; min-width: 120px; flex-shrink: 0;">
                     @include('layouts.navbar')
                 </div>
+
+                <!-- ✅ BOTÓN HAMBURGUESA solo en móvil -->
+                <button class="btn btn-dark d-md-none position-fixed" id="toggleSidebar"
+                    style="bottom: 20px; right: 20px; z-index: 1060; border-radius: 50%; width:50px; height:50px;">
+                    ☰
+                </button>
             @endunless
-            <main class="order-md-2 col-md p-0" style="overflow-y: auto;">
+
+            <!-- ✅ CONTENIDO PRINCIPAL -->
+            <main class="order-md-2 flex-grow-1 p-0" style="overflow-y: auto; min-width: 0;">
                 @include('layouts.alert')
                 @yield('content')
             </main>
+
         </div>
     @else
         <main class="flex-grow-1">
@@ -54,7 +110,29 @@
         </main>
     @endauth
 
-    <script src="{{ asset('js/login.min.js') }}"></script>
+    <script>
+        (function() {
+            const sidebar = document.getElementById('sidebar');
+            const toggleBtn = document.getElementById('toggleSidebar');
+
+            if (!sidebar || !toggleBtn) return;
+
+            // Crear overlay dinámicamente
+            const overlay = document.createElement('div');
+            overlay.id = 'sidebarOverlay';
+            document.body.appendChild(overlay);
+
+            toggleBtn.addEventListener('click', () => {
+                sidebar.classList.toggle('active');
+                overlay.classList.toggle('active');
+            });
+
+            overlay.addEventListener('click', () => {
+                sidebar.classList.remove('active');
+                overlay.classList.remove('active');
+            });
+        })();
+    </script>
 </body>
 
 </html>

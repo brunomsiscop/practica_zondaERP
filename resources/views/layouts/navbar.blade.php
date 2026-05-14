@@ -6,19 +6,22 @@
     }
 
     .navbar-item {
-        color: white;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
+        word-break: break-word;
+        font-size: 0.75em;
+        text-align: center;
+        justify-content: center;
+        padding: 8px 6px;
         text-decoration: none;
-        background-color: transparent;
-        transition: all 0.3s ease;
-        padding: 8px 16px;
-        display: flex;
-        align-items: center;
-        white-space: wrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 100%;
-        border-radius: 0 5px 5px 0;
-        /* ✅ Siempre presente, solo cambia el color */
+        color: white;
+
+        border-radius: 0 8px 8px 0;
+        transition:
+            background-color 0.25s ease,
+            transform 0.25s ease,
+            color 0.25s ease;
     }
 
     .navbar-item:hover {
@@ -79,7 +82,6 @@
     @isset($navigation)
         @foreach ($navigation as $key_nav => $route_nav)
             <li class="nav-item {{ is_array($route_nav) ? 'has-submenu' : '' }}">
-
                 @if (is_array($route_nav))
                     {{-- Tiene submenú --}}
                     <a class="nav-link navbar-item" href="#" data-toggle="submenu">
