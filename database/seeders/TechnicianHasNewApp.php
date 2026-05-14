@@ -15,11 +15,15 @@ class TechnicianHasNewApp extends Seeder
     public function run(): void
     {
 
-        $user_location_ids = UserLocation::select('user_id')->get()->unique();
+        $user_location_ids = UserLocation::select('user_id')
+            ->distinct()
+            ->pluck('user_id');
+
         $users = User::whereIn('id', $user_location_ids)->get();
 
-        foreach ($users as $i => $user) {
-            echo "| Nombre: $user->name |" . PHP_EOL;
+        foreach ($users as $user) {
+            echo "| Nombre: {$user->name} |" . PHP_EOL;
         }
+
     }
 }
