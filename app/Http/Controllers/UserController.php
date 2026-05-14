@@ -86,7 +86,11 @@ class UserController extends Controller
 
 	public function index(): View
 	{
-		$users = User::whereNot('role_id', 4)->orderBy('name')->orderBy('status_id')->paginate($this->size);
+		$users = User::whereNot('role_id', 4)
+			->orderBy('status_id')
+			->orderBy('name')
+			->paginate($this->size);
+			
 		$roles = SimpleRole::where('id', '!=', 4)->get();
 		$wk_depts = WorkDepartment::where('id', '!=', 1)->get();
 		$types = ['Usuario Interno', 'Cliente'];
