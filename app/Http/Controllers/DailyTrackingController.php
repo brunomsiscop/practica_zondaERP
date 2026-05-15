@@ -634,8 +634,18 @@ class DailyTrackingController extends Controller
 
     public function edit(DailyTracking $dailyTracking)
     {
+        $technicians = Technician::with('user')
+            ->join('user as u', 'technician.user_id', '=', 'u.id')
+            ->where('u.status_id', 2)
+            ->orderBy('u.name', 'ASC')
+            ->select('technician.*', 'u.name as user_name')
+            ->get();
+
         return view('crm.daily-tracking.edit', array_merge(
-            ['dailyTracking' => $dailyTracking],
+            [
+                'dailyTracking' => $dailyTracking, 
+                'technicians' => $technicians
+            ],
             $this->formData()
         ));
     }

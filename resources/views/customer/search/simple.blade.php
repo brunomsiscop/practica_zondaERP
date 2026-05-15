@@ -5,10 +5,10 @@
         <div class="card-header">
             <div class="d-flex justify-content-between align-items-center gap-2">
                 <h5 class="card-title fw-bold mb-0">Busqueda Avanzada</h5>
-                <button class="btn btn-outline-dark btn-sm" type="button" data-bs-toggle="collapse"
+                <button class="btn btn-outline-dark btn-sm p-collapse-button" type="button" data-bs-toggle="collapse"
                     data-bs-target=".multi-collapse" aria-expanded="false"
                     aria-controls="multiCollapseExample1 multiCollapseExample2">
-                    <i class="bi bi-arrows-collapse"></i>
+                    <i class="bi bi-caret-down-fill"></i>
                 </button>
             </div>
         </div>

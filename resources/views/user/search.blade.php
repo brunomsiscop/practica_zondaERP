@@ -7,7 +7,7 @@
                 <button class="btn btn-outline-dark btn-sm" type="button" data-bs-toggle="collapse"
                     data-bs-target=".multi-collapse" aria-expanded="false"
                     aria-controls="multiCollapseExample1 multiCollapseExample2">
-                    <i class="bi bi-arrows-collapse"></i>
+                    <i class="bi bi-caret-down-fill"></i>
                 </button>
             </div>
         </div>

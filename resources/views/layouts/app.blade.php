@@ -74,6 +74,10 @@
         #sidebarOverlay.active {
             display: block;
         }
+
+        .p-collapse-button {
+            padding: 0px 5px 0px 5px; 
+        }
     </style>
 </head>
 

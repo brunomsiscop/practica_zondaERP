@@ -485,7 +485,12 @@ class CustomerController extends Controller
         ];
 
         $navigation = [
-            'Agenda' => route('crm.agenda'),
+            'Agenda' => [
+                'Calendario' => route('crm.agenda'),
+                'Seguimientos' => route('crm.tracking'),
+                'Cotizaciones' => route('crm.quotation'),
+                'Actividades diarias' => route('crm.daily-tracking.index'),
+            ],
             'Clientes' => route('customer.index'),
             'Sedes' => route('customer.index.sedes'),
             'Clientes potenciales' => route('customer.index.leads'),
@@ -509,7 +514,12 @@ class CustomerController extends Controller
         ];
 
         $navigation = [
-            'Agenda' => route('crm.agenda'),
+            'Agenda' => [
+                'Calendario' => route('crm.agenda'),
+                'Seguimientos' => route('crm.tracking'),
+                'Cotizaciones' => route('crm.quotation'),
+                'Actividades diarias' => route('crm.daily-tracking.index'),
+            ],
             'Clientes' => route('customer.index'),
             'Sedes' => route('customer.index.sedes'),
             'Clientes potenciales' => route('customer.index.leads'),
@@ -533,7 +543,12 @@ class CustomerController extends Controller
         ];
 
         $navigation = [
-            'Agenda' => route('crm.agenda'),
+            'Agenda' => [
+                'Calendario' => route('crm.agenda'),
+                'Seguimientos' => route('crm.tracking'),
+                'Cotizaciones' => route('crm.quotation'),
+                'Actividades diarias' => route('crm.daily-tracking.index'),
+            ],
             'Clientes' => route('customer.index'),
             'Sedes' => route('customer.index.sedes'),
             'Clientes potenciales' => route('customer.index.leads'),
@@ -1253,7 +1268,7 @@ class CustomerController extends Controller
     public function destroy(string $id)
     {
         $customer = Customer::find($id);
-        
+
         if ($customer->orders()->count() > 0) {
             session()->flash('error', 'No se puede eliminar el cliente porque tiene ordenes de servicio asociadas.');
             return back();
@@ -1857,7 +1872,7 @@ class CustomerController extends Controller
         $devicesByVersion = [];
         foreach ($groupedDevices as $group) {
             foreach ($group['versions'] as $version) {
-                $versionKey = (string)$version;
+                $versionKey = (string) $version;
                 if (!isset($devicesByVersion[$versionKey])) {
                     $devicesByVersion[$versionKey] = [];
                 }
@@ -1873,7 +1888,7 @@ class CustomerController extends Controller
         // Para cada versión, ordenar los dispositivos por nplan ascendente
         foreach ($devicesByVersion as $version => &$groups) {
             usort($groups, function ($a, $b) {
-                return strnatcmp((string)($a['nplan'] ?? ''), (string)($b['nplan'] ?? ''));
+                return strnatcmp((string) ($a['nplan'] ?? ''), (string) ($b['nplan'] ?? ''));
             });
         }
         unset($groups);
@@ -1900,7 +1915,7 @@ class CustomerController extends Controller
                     'service' => $group['service_name'],
                     'nplan' => $group['nplan'],
                     'device_name' => $group['code'],
-                    'versions' => [(string)$version],
+                    'versions' => [(string) $version],
                     'pests' => $complete_pests,
                 ];
             }
@@ -2053,7 +2068,7 @@ class CustomerController extends Controller
 
             // Puede haber varias versiones por grupo
             foreach ($group['versions'] as $version) {
-                $versionKey = (string)$version;
+                $versionKey = (string) $version;
                 if (!isset($dataByVersion[$versionKey])) {
                     $dataByVersion[$versionKey] = [];
                 }
@@ -2064,7 +2079,7 @@ class CustomerController extends Controller
                     'service' => $group['service'] ?? 'N/A',
                     'nplan' => $group['nplan'],
                     'device_count' => $group['device_count'],
-                    'versions' => [(string)$version],
+                    'versions' => [(string) $version],
                     'consumption_value' => $consumptionValue,
                     'weekly_consumption' => $group['_weekly_consumption'] ?? [],
                 ];
@@ -2080,7 +2095,7 @@ class CustomerController extends Controller
         $data = [];
         foreach ($dataByVersion as $version => &$rows) {
             usort($rows, function ($a, $b) {
-                return strnatcmp((string)($a['nplan'] ?? ''), (string)($b['nplan'] ?? ''));
+                return strnatcmp((string) ($a['nplan'] ?? ''), (string) ($b['nplan'] ?? ''));
             });
             foreach ($rows as $row) {
                 $data[] = $row;
