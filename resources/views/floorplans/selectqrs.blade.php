@@ -16,8 +16,11 @@
                                     <label for="version" class="form-label">Version</label>
                                     <select class="form-select form-select-sm" id="version" name="version">
                                         @foreach ($floorplan->versions()->latest()->get() as $floorVersion)
-                                            <option value="{{ $floorVersion->version }}" {{ request('version') == $floorVersion->version ? 'selected' : '' }}>
-                                                v.{{ $floorVersion->version }} [{{ \Carbon\Carbon::parse($floorVersion->updated_at)->format('d/m/Y') }} - {{ \Carbon\Carbon::parse($floorVersion->updated_at)->format('H:i:s') }}]
+                                            <option value="{{ $floorVersion->version }}"
+                                                {{ request('version') == $floorVersion->version ? 'selected' : '' }}>
+                                                v.{{ $floorVersion->version }}
+                                                [{{ \Carbon\Carbon::parse($floorVersion->updated_at)->format('d/m/Y') }} -
+                                                {{ \Carbon\Carbon::parse($floorVersion->updated_at)->format('H:i:s') }}]
                                             </option>
                                         @endforeach
                                     </select>
@@ -28,7 +31,8 @@
                                     <select class="form-select form-select-sm" id="point" name="point">
                                         <option value="">Todos los puntos de control</option>
                                         @foreach ($control_points as $point)
-                                            <option value="{{ $point->id }}" {{ request('point') == $point->id ? 'selected' : '' }}>
+                                            <option value="{{ $point->id }}"
+                                                {{ request('point') == $point->id ? 'selected' : '' }}>
                                                 {{ $point->name }}
                                             </option>
                                         @endforeach
@@ -40,7 +44,9 @@
                                     <select class="form-select form-select-sm" id="app-area" name="app_area">
                                         <option value="">Todas las zonas</option>
                                         @foreach ($application_areas as $app_area)
-                                            <option value="{{ $app_area->id }}" {{ request('app_area') == $app_area->id ? 'selected' : '' }}>{{ $app_area->name }}</option>
+                                            <option value="{{ $app_area->id }}"
+                                                {{ request('app_area') == $app_area->id ? 'selected' : '' }}>
+                                                {{ $app_area->name }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -105,7 +111,8 @@
                                 </td>
                                 <td id="{{ $device->type_control_point_id }}">{{ $device->controlPoint->name }}
                                 </td>
-                                <td id="{{ $device->application_area_id ?? 0 }}">{{ $device->applicationArea->name ?? '-' }}
+                                <td id="{{ $device->application_area_id ?? 0 }}">
+                                    {{ $device->applicationArea->name ?? '-' }}
                                 </td>
                                 <td>{{ $device->version }}</td>
                             </tr>
@@ -114,7 +121,8 @@
                 </table>
             </div>
 
-            <form class="p-0" method="POST" action="{{ route('floorplan.qr.print', ['id' => $floorplan->id]) }}" target="_blank">
+            <form class="p-0" method="POST" action="{{ route('floorplan.qr.print', ['id' => $floorplan->id]) }}"
+                target="_blank">
                 @csrf
                 <input type="hidden" id="selected-devices" name="selected_devices" value="">
                 <button type="submit" class="btn btn-primary my-3" onclick="setDevices()">Generar</button>
@@ -126,30 +134,36 @@
         var selected_devices = [];
 
         function selectAllDevices(isChecked) {
+            const checkboxes = $('#table-body input[type="checkbox"]');
+
+            checkboxes.prop('checked', isChecked);
+
             if (isChecked) {
-                selected_devices = $('#table-body input[type="checkbox"]')
-                    .prop('checked', true)
-                    .map(function() {
-                        return this.value;
-                    }).get();
+                selected_devices = checkboxes.map(function() {
+                    return parseInt(this.value);
+                }).get();
             } else {
-                $('#table-body input[type="checkbox"]').prop('checked', false);
                 selected_devices = [];
             }
         }
 
         function selectDevice(element) {
             const value = parseInt(element.value);
-            const isChecked = element.checked;
-            if (isChecked) {
+
+            if (element.checked) {
                 if (!selected_devices.includes(value)) {
                     selected_devices.push(value);
                 }
             } else {
-                if (selected_devices.includes(value)) {
-                    selected_devices = selected_devices.filter(item => item != value);
-                }
+                selected_devices = selected_devices.filter(item => item !== value);
             }
+
+            // Mantener sincronizado el checkbox principal
+            $('#select-all').prop(
+                'checked',
+                $('#table-body input[type="checkbox"]:checked').length ===
+                $('#table-body input[type="checkbox"]').length
+            );
         }
 
         function setDevices() {
