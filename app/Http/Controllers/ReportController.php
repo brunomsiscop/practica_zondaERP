@@ -677,6 +677,7 @@ class ReportController extends Controller
         $devices_products = DeviceProduct::where('order_id', $order->id)->get();
         $order_products = OrderProduct::where('order_id', $order->id)->get();
 
+        dd($devices_products->isNotEmpty());
 
         if ($devices_products->isNotEmpty() && $order_products->isEmpty()) {
             // Agrupar DeviceProduct por product_id y lot_id
