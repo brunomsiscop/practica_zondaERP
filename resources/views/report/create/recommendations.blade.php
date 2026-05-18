@@ -76,6 +76,7 @@
                                 {{ 'Hola esto es una prueba' }}
                                 {!! $order->reportRecommendations->where('service_id', $service->id)->first()->recommendation_text !!}
                             @else
+                            {{ 'Hola esto es una prueba2' }}
                                 @if ($service->prefix == 2)
                                     <p><strong>ANTES DE LA APLICACIÓN QUÍMICA</strong></p>
                                     <ol>
