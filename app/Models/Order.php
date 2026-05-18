@@ -157,7 +157,7 @@ class Order extends Model
         );
     }
 
-    public function productsByService($serviceId)
+    public function productsByService(string $serviceId)
     {
         return $this->products()->where('service_id', $serviceId)->get();
     }
@@ -173,7 +173,7 @@ class Order extends Model
         if ($recs->isEmpty()) {
             return false;
         } else {
-            return $recs[0]['recommendation_id'] != null && $recs[0]['recommendation_text'] != null;
+            return $recs[0]['recommendation_id'] != null || $recs[0]['recommendation_text'] != null;
         }
     }
 
