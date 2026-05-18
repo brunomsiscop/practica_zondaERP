@@ -1255,11 +1255,7 @@ class ReportController extends Controller
     public function destroyProduct(string $dataId)
     {
         $order_product = OrderProduct::find($dataId);
-
-        dd($order_product);
         $order = Order::find($order_product->order_id);
-
-        $order_product->delete();
 
         WarehouseOrder::where('order_id', $order_product->order_id)
             ->where('product_id', $order_product->product_id)
@@ -1290,6 +1286,8 @@ class ReportController extends Controller
                 }
             }
         }
+
+        $order_product->delete();
 
         return back();
     }
