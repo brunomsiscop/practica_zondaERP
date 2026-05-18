@@ -32,10 +32,24 @@
 
     /* Flecha indicadora de submenú */
     .navbar-item .arrow {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         font-size: 10px;
-        transition: transform 0.3s ease;
+        transform-origin: center;
+        transition: transform 0.25s ease;
         margin-left: 5px;
         /* ✅ Empuja la flecha al extremo derecho */
+    }
+
+    .navbar-item .arrow.is-rotating {
+        animation: arrow-press 0.25s ease;
+    }
+
+    @keyframes arrow-press {
+        50% {
+            transform: scale(0.82);
+        }
     }
 
     /* Submenú oculto por defecto */
@@ -74,7 +88,7 @@
 
     /* Rotar flecha cuando está abierto */
     .nav-item.open>a .arrow {
-        transform: rotate(90deg);
+        transform: rotate(180deg);
     }
 </style>
 
@@ -86,7 +100,7 @@
                     {{-- Tiene submenú --}}
                     <a class="nav-link navbar-item" href="#" data-toggle="submenu">
                         <span>{{ $key_nav }}</span>
-                        <span class="arrow">&#9654;</span>
+                        <span class="arrow"><i class="bi bi-caret-down-fill"></i></span>
                     </a>
                     <ul class="submenu">
                         @foreach ($route_nav as $sub_key => $sub_route)
@@ -115,12 +129,19 @@
 
             const parentLi = this.closest('.nav-item');
             const submenu = parentLi.querySelector('.submenu');
+            const arrow = this.querySelector('.arrow');
             const isOpen = parentLi.classList.contains('open');
+
+            if (arrow) {
+                arrow.classList.remove('is-rotating');
+                void arrow.offsetWidth;
+                arrow.classList.add('is-rotating');
+            }
 
             // Cierra todos los submenús abiertos
             document.querySelectorAll('.nav-item.open').forEach(function(item) {
                 item.classList.remove('open');
-                item.querySelector('.submenu').classList.remove('open');
+                item.querySelector('.submenu')?.classList.remove('open');
             });
 
             // Abre el actual si estaba cerrado
@@ -128,6 +149,12 @@
                 parentLi.classList.add('open');
                 submenu.classList.add('open');
             }
+        });
+    });
+
+    document.querySelectorAll('.navbar-item .arrow').forEach(function(arrow) {
+        arrow.addEventListener('animationend', function() {
+            arrow.classList.remove('is-rotating');
         });
     });
 </script>

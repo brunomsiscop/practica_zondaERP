@@ -7,7 +7,6 @@ use App\Models\DirectoryPermission;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\DB;
 use App\Models\ClientFile;
 use App\Models\Customer;
 use App\Models\DirectoryUser;
@@ -809,28 +808,56 @@ class ClientController extends Controller
 
     public function managementDirectory(string $path)
     {
-        $path = $path . '/';
-        $dir_permissions = DirectoryPermission::where('path', $path)->get();
+        $path = trim(str_replace('\\', '/', rawurldecode($path)), '/');
+        $pathVariants = array_values(array_unique([
+            $path,
+            Str::finish($path, '/'),
+        ]));
+
+
+        $dir_permissions = DirectoryPermission::whereIn('path', $pathVariants)->get();
 
         if ($dir_permissions->isEmpty()) {
             $root = $this->getRootPath($path);
-            $dir_permissions = DirectoryPermission::where('path', $root)->get();
+            $root = trim(str_replace('\\', '/', $root), '/');
+            $rootVariants = array_values(array_unique([
+                $root,
+                Str::finish($root, '/'),
+            ]));
+
+            //dd($rootVariants);
+            $dir_permissions = DirectoryPermission::whereIn('path', $rootVariants)->get();
         }
+
+        $isVisible = null;
 
         foreach ($dir_permissions as $dir_per) {
-            DirectoryManagement::updateOrCreate(
-                [
-                    'user_id' => $dir_per->user_id,
-                    'path' => $path
-                ],
-                [
-                    'is_visible' => DB::raw('NOT is_visible'),
-                    'updated_at' => now()
-                ]
-            );
+            $dir_mgmt = DirectoryManagement::where('user_id', $dir_per->user_id)
+                ->whereIn('path', $pathVariants)
+                ->first();
+
+            if ($dir_mgmt) {
+                $isVisible = !$dir_mgmt->is_visible;
+                $dir_mgmt->update([
+                    'path' => $path,
+                    'is_visible' => $isVisible,
+                ]);
+                continue;
+            }
+
+            $isVisible = false;
+            DirectoryManagement::create([
+                'user_id' => $dir_per->user_id,
+                'path' => $path,
+                'is_visible' => false,
+            ]);
         }
 
-        return back();
+        if ($isVisible === null) {
+            return back()->with('warning', 'No se encontraron permisos para cambiar la visibilidad de la carpeta.');
+        }
+
+        return back()->with('success', $isVisible ? 'La carpeta se mostró correctamente.' : 'La carpeta se ocultó correctamente.');
     }
 
     public function updateDirectory(Request $request)

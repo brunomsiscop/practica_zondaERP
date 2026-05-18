@@ -72,7 +72,7 @@
                     <div class="mb-3">
                         <div id="summary-recs{{ $service->id }}" class="smnote smnote-recommendation"
                             data-autosave-type="recommendation" data-service-id="{{ $service->id }}" style="height: 300px">
-                            @if ($order->reportRecommendations->where('service_id', $service->id)->first())
+                            @if ($order->hasRecommendations($service->id))
                                 {!! $order->reportRecommendations->where('service_id', $service->id)->first()->recommendation_text !!}
                             @else
                                 @if ($service->prefix == 2)

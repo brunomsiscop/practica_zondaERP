@@ -109,9 +109,24 @@ class User extends Authenticatable
         return $this->hasMany(DirectoryPermission::class, 'user_id', 'id');
     }
 
-    public function dirManagement(string $path) {
-        $dir_mgmt = DirectoryManagement::where('path', $path)->first();
-        return $dir_mgmt ? $dir_mgmt->is_visible : true;
+    public function dirManagement(string $path)
+    {
+        $normalizedPath = trim(str_replace('\\', '/', rawurldecode($path)), '/');
+        $pathVariants = array_values(array_unique([
+            $path,
+            $normalizedPath,
+            Str::finish($normalizedPath, '/'),
+        ]));
+
+        $query = DirectoryManagement::whereIn('path', $pathVariants);
+        $dir_mgmt = (clone $query)->where('user_id', $this->id)->first();
+
+        if (!$dir_mgmt && in_array($this->work_department_id, [1, 7])) {
+            $dir_mgmt = (clone $query)->where('is_visible', false)->first()
+                ?? (clone $query)->first();
+        }
+
+        return $dir_mgmt ? (bool) $dir_mgmt->is_visible : true;
     }
     
     public function hasDirectory(string $path)

@@ -99,8 +99,12 @@
                         @endforeach
 
                         @foreach ($data['directories'] as $dir)
-                            @if (in_array($user->work_department_id, [1, 7]))
-                                <tr>
+                            @php
+                                $isAdminDepartment = in_array($user->work_department_id, [1, 7]);
+                                $isVisible = $user->dirManagement($dir['path']);
+                            @endphp
+                            @if ($isAdminDepartment)
+                                <tr class="{{ $isVisible ? '' : 'table-secondary' }}">
                                     <td class="w-100">
                                         <div class="d-flex align-items-center gap-2 w-100">
                                             @can('write_system_client')
@@ -110,9 +114,12 @@
                                                 </div>
                                             @endcan
                                             <a href="{{ route('client.system.index', ['path' => $dir['path']]) }}"
-                                                class="text-decoration-none d-flex align-items-center gap-2 w-100">
+                                                class="text-decoration-none d-flex align-items-center gap-2 w-100 {{ $isVisible ? '' : 'text-muted' }}">
                                                 <i class="bi bi-folder-fill text-warning"></i>
                                                 <span>{{ $dir['name'] }}</span>
+                                                @unless ($isVisible)
+                                                    <span class="badge text-bg-secondary">Oculta</span>
+                                                @endunless
                                             </a>
                                         </div>
                                     </td>
@@ -121,10 +128,10 @@
                                             <div class="d-flex gap-1 justify-content-end">
                                                 <a href="{{ route('client.directory.mgmt', ['userId' => auth()->user()->id, 'path' => $dir['path']]) }}"
                                                     class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-placement="top"
-                                                    data-bs-title=" {{ $user->dirManagement($dir['path']) ? 'Ocultar carpeta' : 'Mostrar carpeta' }}"
+                                                    data-bs-title=" {{ $isVisible ? 'Ocultar carpeta' : 'Mostrar carpeta' }}"
                                                     onclick="return confirm('{{ __('messages.are_you_sure_visible') }}')">
                                                     <i
-                                                        class="bi {{ $user->dirManagement($dir['path']) ? 'bi-eye-slash-fill' : 'bi-eye-fill' }}"></i>
+                                                        class="bi {{ $isVisible ? 'bi-eye-slash-fill' : 'bi-eye-fill' }}"></i>
                                                 </a>
                                                 <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="modal"
                                                     data-bs-target="#editDirectoryModal"
@@ -145,7 +152,7 @@
                                     </td>
                                 </tr>
                             @else
-                                @if (($user->hasDirectory($dir['path']) || $user->hasPathInside($dir['path'])) && $user->dirManagement($dir['path']))
+                                @if (($user->hasDirectory($dir['path']) || $user->hasPathInside($dir['path'])) && $isVisible)
                                     <tr>
                                         <td class="w-75">
                                             <a href="{{ route('client.system.index', ['path' => $dir['path']]) }}"
@@ -160,10 +167,10 @@
                                                     <a href="{{ route('client.directory.mgmt', ['userId' => auth()->user()->id, 'path' => $dir['path']]) }}"
                                                         class="btn btn-info btn-sm" data-bs-toggle="tooltip"
                                                         data-bs-placement="top"
-                                                        data-bs-title=" {{ $user->dirManagement($dir['path']) ? 'Ocultar carpeta' : 'Mostrar carpeta' }}"
+                                                        data-bs-title=" {{ $isVisible ? 'Ocultar carpeta' : 'Mostrar carpeta' }}"
                                                         onclick="return confirm('{{ __('messages.are_you_sure_visible') }}')">
                                                         <i
-                                                            class="bi {{ $user->dirManagement($dir['path']) ? 'bi-eye-slash-fill' : 'bi-eye-fill' }}"></i>
+                                                            class="bi {{ $isVisible ? 'bi-eye-slash-fill' : 'bi-eye-fill' }}"></i>
                                                     </a>
                                                     <button type="button" class="btn btn-secondary btn-sm"
                                                         data-bs-toggle="modal" data-bs-target="#editDirectoryModal"

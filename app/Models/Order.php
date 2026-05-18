@@ -98,16 +98,16 @@ class Order extends Model
         $technicianIds = OrderTechnician::where('order_id', $this->id)
             ->pluck('technician_id')
             ->toArray();
-        
+
         if (empty($technicianIds)) {
             return collect([]);
         }
-        
+
         // Obtener los user_ids desde la tabla technician
         $userIds = Technician::whereIn('id', $technicianIds)
             ->pluck('user_id')
             ->toArray();
-        
+
         // Obtener los usuarios
         $technicians = User::whereIn('id', $userIds)->get();
         return $technicians;
@@ -165,6 +165,16 @@ class Order extends Model
     public function reportRecommendations()
     {
         return $this->hasMany(OrderRecommendation::class, 'order_id', 'id');
+    }
+
+    public function hasRecommendations(string $service_id)
+    {
+        $recs = $this->reportRecommendations()->where('service_id', $service_id)->get();
+        if ($recs->isEmpty()) {
+            return false;
+        } else {
+            return $recs[0]['recommendation_id'] != null && $recs[0]['recommendation_text'] != null;
+        }
     }
 
     public function hasPest($serviceId, $pestId)
