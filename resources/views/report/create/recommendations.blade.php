@@ -73,7 +73,13 @@
                         <div id="summary-recs{{ $service->id }}" class="smnote smnote-recommendation"
                             data-autosave-type="recommendation" data-service-id="{{ $service->id }}" style="height: 300px">
                             @if ($order->hasRecommendations($service->id))
-                                {!! $order->reportRecommendations->where('service_id', $service->id)->first()->recommendation_text !!}
+                                @php
+                                    $recommendationText = $order->reportRecommendations->where('service_id', $service->id)->first()->recommendation_text;
+                                    $recommendationHtml = $recommendationText !== strip_tags($recommendationText)
+                                        ? $recommendationText
+                                        : nl2br(e($recommendationText));
+                                @endphp
+                                {!! $recommendationHtml !!}
                             @else
                                 @if ($service->prefix == 2)
                                     <p><strong>ANTES DE LA APLICACIÓN QUÍMICA</strong></p>
