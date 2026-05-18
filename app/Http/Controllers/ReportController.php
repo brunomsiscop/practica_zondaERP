@@ -1254,8 +1254,6 @@ class ReportController extends Controller
 
     public function destroyProduct(string $dataId)
     {
-        dd($dataId);
-        dd('...');
         $order_product = OrderProduct::find($dataId);
 
         dd($order_product);
