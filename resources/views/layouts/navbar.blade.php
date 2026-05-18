@@ -34,7 +34,7 @@
     .navbar-item .arrow {
         font-size: 10px;
         transition: transform 0.3s ease;
-        margin-left: auto;
+        margin-left: 5px;
         /* ✅ Empuja la flecha al extremo derecho */
     }
 
