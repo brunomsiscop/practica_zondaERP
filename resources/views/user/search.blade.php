@@ -10,7 +10,7 @@
                     <i class="bi bi-caret-down-fill"></i>
                 </button>
             </div>
-        </div>
+        </div>  
         <div class="card-body collapse multi-collapse">
             <div class="row g-3 mb-3">
                 <div class="col-lg-3 col-sm-6 col-12">

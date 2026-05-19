@@ -237,6 +237,25 @@ class ClientController extends Controller
             ->toArray();
     }
 
+    private function listDirectoryContentsByType(string $path): array
+    {
+        $directories = [];
+        $files = [];
+
+        foreach ($this->diskListContents($path, false) as $item) {
+            if ($item->isDir()) {
+                $directories[] = $item->path();
+                continue;
+            }
+
+            if ($item->isFile()) {
+                $files[] = $item->path();
+            }
+        }
+
+        return [$directories, $files];
+    }
+
     // Método para listar archivos (compatible con Flysystem v3)
     private function listFiles($path)
     {
@@ -368,12 +387,9 @@ class ClientController extends Controller
         ];
 
         $mip_dirs = $mip_files = [];
-        $disk = $this->getDisk();
         $dir_name = $this->mip_path . basename($path);
 
-        // Usar métodos adaptados para Flysystem v3
-        $local_dirs = $this->getDirectoriesInPath($path);
-        $local_files = $this->listFiles($path);
+        [$local_dirs, $local_files] = $this->listDirectoryContentsByType($path);
 
         sort($local_dirs);
         sort($local_files);
@@ -382,8 +398,7 @@ class ClientController extends Controller
         $user = User::find(Auth::id());
 
         if ($this->diskDirectoryExists($dir_name)) {
-            $mip_dirs = $this->getDirectoriesInPath($dir_name);
-            $mip_files = $this->listFiles($dir_name);
+            [$mip_dirs, $mip_files] = $this->listDirectoryContentsByType($dir_name);
         }
 
         $data = [
