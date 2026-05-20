@@ -565,7 +565,7 @@ class OrderController extends Controller
         }
     }*/
 
-    public function edit(string $id): View
+    public function edit(string $id): View|RedirectResponse
     {
         try {
             $selected_services = [];
@@ -578,7 +578,7 @@ class OrderController extends Controller
 
             if (!isset($order->customer_id)) {
                 $error = 'No se ha seleccionado un cliente.';
-                return view('order.index', compact('error'));
+                return redirect()->route('order.index')->with('error', $error);
             }
 
             // Eliminar estas líneas que consumen mucha memoria
@@ -644,14 +644,14 @@ class OrderController extends Controller
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             $error = 'La orden no fue encontrada.';
-            return view('order.index', compact('error'));
+            return redirect()->route('order.index')->with('error', $error);
 
         } catch (\Exception $e) {
             // Log del error
             Log::error('Error en OrderController@edit - ID: ' . $id . ' - Error: ' . $e->getMessage());
 
             $error = 'Ocurrió un error al cargar la orden. Por favor, intente nuevamente.';
-            return view('order.index', compact('error'));
+            return redirect()->route('order.index')->with('error', $error);
         }
     }
 
