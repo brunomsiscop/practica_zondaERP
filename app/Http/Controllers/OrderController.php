@@ -81,10 +81,10 @@ class OrderController extends Controller
             ->select('order.*')
             ->with([
                 'customer:id,name',
-                'service:id,name',
+                'services:id,name',
                 'status:id,name',
                 'closeUser:id,name',
-                'technician.user:id,name',
+                'technicians.user:id,name',
             ])
             ->paginate($this->size);
 
