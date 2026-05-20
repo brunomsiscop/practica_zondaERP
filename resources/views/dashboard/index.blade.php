@@ -111,11 +111,10 @@
             transform: translateY(-5px);
         }
 
-        /* Animaciones personalizadas */
         .card-animate {
-            opacity: 0;
-            animation: fadeIn 0.3s ease-out forwards;
-            transition: all 0.3s ease;
+            opacity: 1;
+            transform: none;
+            animation: none;
         }
 
         .table-row-animate {
@@ -408,7 +407,7 @@
         </div>
 
         <!-- Tabla con animación secuencial -->
-        {{--<div class="row justify-content-md-center table-card">
+        {{-- <div class="row justify-content-md-center table-card">
             <div class="col-lg-9">
                 <div class="border rounded shadow p-3 mb-3">
                     <div class="fw-bold mb-3">
@@ -490,11 +489,11 @@
                     </div>
                 </div>
             </div>
-        </div>--}}
+        </div> --}}
     </div>
 
 
-    {{--<div class="modal fade" id="crmModal" tabindex="-1" aria-labelledby="crmModalLabel" aria-hidden="true">
+    {{-- <div class="modal fade" id="crmModal" tabindex="-1" aria-labelledby="crmModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
             <div class="modal-content">
                 <!-- Header con gradiente -->
@@ -569,7 +568,7 @@
                 </div>
             </div>
         </div>
-    </div>--}}
+    </div> --}}
 
     <script>
         var trackings_data = @json($trackings_data);
