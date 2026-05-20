@@ -272,6 +272,34 @@
 
         // Variables para controlar eliminaciones en proceso
         let deletingItems = new Set();
+        const csrfToken = $('meta[name="csrf-token"]').attr("content");
+
+        function postDeleteRequest(url, payloadKey, paths) {
+            const formData = new FormData();
+            formData.append(payloadKey, JSON.stringify(paths));
+
+            return $.ajax({
+                url: url,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {"X-CSRF-TOKEN": csrfToken}
+            });
+        }
+
+        function showDeletingAlert(totalItems) {
+            const loadingHtml = '<div class="alert alert-info position-fixed top-0 start-50 translate-middle-x mt-3" style="z-index: 9999;">'
+                + '<span class="spinner-border spinner-border-sm me-2"></span>'
+                + `Eliminando ${totalItems} elemento(s)...`
+                + '</div>';
+
+            $('body').append(loadingHtml);
+        }
+
+        function removeDeletingAlert() {
+            $('.alert-info').remove();
+        }
 
         // Manejar eliminación de carpetas
         $(document).on('click', '.delete-directory-btn', function(e) {
@@ -298,8 +326,24 @@
             btn.prop('disabled', true)
                .html('<span class="spinner-border spinner-border-sm me-1"></span>Eliminando...');
 
-            // Realizar la petición
-            window.location.href = '{{ route('client.directory.destroy', ['path' => '__PATH__']) }}'.replace('__PATH__', encodeURIComponent(path));
+            showDeletingAlert(1);
+
+            postDeleteRequest("{{ route('client.directory.mass-delete') }}", 'directories', [path])
+                .done(function(response) {
+                    removeDeletingAlert();
+
+                    if (!response.success) {
+                        alert(response.message || 'No fue posible eliminar la carpeta');
+                    }
+
+                    location.reload();
+                })
+                .fail(function(xhr) {
+                    removeDeletingAlert();
+                    const message = xhr.responseJSON?.message || 'Error al eliminar la carpeta';
+                    alert('Error: ' + message);
+                    location.reload();
+                });
         });
 
         // Manejar eliminación de archivos
@@ -327,8 +371,24 @@
             btn.prop('disabled', true)
                .html('<span class="spinner-border spinner-border-sm"></span>');
 
-            // Realizar la petición
-            window.location.href = '{{ route('client.file.destroy', ['path' => '__PATH__']) }}'.replace('__PATH__', encodeURIComponent(path));
+            showDeletingAlert(1);
+
+            postDeleteRequest("{{ route('client.file.mass-delete') }}", 'files', [path])
+                .done(function(response) {
+                    removeDeletingAlert();
+
+                    if (!response.success) {
+                        alert(response.message || 'No fue posible eliminar el archivo');
+                    }
+
+                    location.reload();
+                })
+                .fail(function(xhr) {
+                    removeDeletingAlert();
+                    const message = xhr.responseJSON?.message || 'Error al eliminar el archivo';
+                    alert('Error: ' + message);
+                    location.reload();
+                });
         });
 
         /**
@@ -388,58 +448,36 @@
             }
             
             // Mostrar indicador de carga
-            const loadingHtml = '<div class="alert alert-info position-fixed top-0 start-50 translate-middle-x mt-3" style="z-index: 9999;">'
-                + '<span class="spinner-border spinner-border-sm me-2"></span>'
-                + `Eliminando ${totalItems} elemento(s)...`
-                + '</div>';
-            $('body').append(loadingHtml);
+            showDeletingAlert(totalItems);
             
             const requests = [];
-            const csrfToken = $('meta[name="csrf-token"]').attr("content");
             
             // Petición para eliminar carpetas
             if (selectedDirs.length > 0) {
-                const formDataDirs = new FormData();
-                formDataDirs.append('directories', JSON.stringify(selectedDirs));
-                
-                requests.push(
-                    $.ajax({
-                        url: "{{ route('client.directory.mass-delete') }}",
-                        type: 'POST',
-                        data: formDataDirs,
-                        processData: false,
-                        contentType: false,
-                        headers: {"X-CSRF-TOKEN": csrfToken}
-                    })
-                );
+                requests.push(postDeleteRequest("{{ route('client.directory.mass-delete') }}", 'directories', selectedDirs));
             }
             
             // Petición para eliminar archivos
             if (selectedFiles.length > 0) {
-                const formDataFiles = new FormData();
-                formDataFiles.append('files', JSON.stringify(selectedFiles));
-                
-                requests.push(
-                    $.ajax({
-                        url: "{{ route('client.file.mass-delete') }}",
-                        type: 'POST',
-                        data: formDataFiles,
-                        processData: false,
-                        contentType: false,
-                        headers: {"X-CSRF-TOKEN": csrfToken}
-                    })
-                );
+                requests.push(postDeleteRequest("{{ route('client.file.mass-delete') }}", 'files', selectedFiles));
             }
             
             // Ejecutar todas las peticiones
-            $.when.apply($, requests)
-                .done(function() {
-                    $('.alert-info').remove();
-                    alert(`✓ ${totalItems} elemento(s) eliminado(s) correctamente`);
+            Promise.all(requests)
+                .then(function(responses) {
+                    removeDeletingAlert();
+
+                    const failedResponses = responses.filter(response => !response.success);
+
+                    if (failedResponses.length > 0) {
+                        alert(failedResponses.map(response => response.message).join('\n'));
+                    } else {
+                        alert(`✓ ${totalItems} elemento(s) eliminado(s) correctamente`);
+                    }
+
                     location.reload();
-                })
-                .fail(function(xhr) {
-                    $('.alert-info').remove();
+                }).catch(function(xhr) {
+                    removeDeletingAlert();
                     const message = xhr.responseJSON?.message || 'Error al eliminar los elementos';
                     alert('Error: ' + message);
                     location.reload();

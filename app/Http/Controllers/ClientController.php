@@ -154,6 +154,19 @@ class ClientController extends Controller
     {
         return $this->getDiskDriver()->mimeType($path);
     }
+
+    private function normalizeClientSystemPath(?string $path): string
+    {
+        return $this->normalizeStoragePath($path, $this->path);
+    }
+
+    private function parentStoragePath(string $path): string
+    {
+        $parent = dirname(trim($path, '/'));
+
+        return $parent === '.' ? trim($this->path, '/') : $parent;
+    }
+
     private function normalizeStoragePath(?string $path, string $basePath): string
     {
         $normalizedBase = trim(str_replace('\\', '/', $basePath), '/');
@@ -1157,6 +1170,7 @@ class ClientController extends Controller
     {
         try {
             $disk = $this->getDisk();
+            $path = $this->normalizeClientSystemPath($path);
 
             if (!$this->diskDirectoryExists($path)) {
                 return response()->json(['error' => 'Directory not found.'], 404);
@@ -1169,6 +1183,8 @@ class ClientController extends Controller
                 // Para almacenamiento local
                 $this->deleteLocalDirectory($disk, $path);
             }
+
+            $this->forgetDirectoryListingCache($path, $this->parentStoragePath($path));
 
             $this->logClientFolderChange('client_folder_deleted', [
                 'path' => $path,
@@ -1262,7 +1278,14 @@ class ClientController extends Controller
     {
         try {
             $disk = $this->getDisk();
+            $path = $this->normalizeClientSystemPath($path);
+
+            if (!$this->diskFileExists($path)) {
+                return response()->json(['error' => 'File not found.'], 404);
+            }
+
             $disk->delete($path);
+            $this->forgetDirectoryListingCache($this->parentStoragePath($path));
 
             return back();
         } catch (\Exception $e) {
@@ -1281,20 +1304,23 @@ class ClientController extends Controller
 
         $disk = $this->getDisk();
         $directories = json_decode($request->input('directories'), true);
+
+        if (!is_array($directories)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Formato de carpetas inválido'
+            ], 422);
+        }
+
         $results = [];
         $allSuccess = true;
         $deletedCount = 0;
 
         foreach ($directories as $directory) {
-            // Normalizar ruta
-            $dirPath = trim($directory, '/');
-            if (strpos($dirPath, 'client_system/') !== 0) {
-                $dirPath = 'client_system/' . $dirPath;
-            }
+            $dirPath = $this->normalizeClientSystemPath($directory);
 
             try {
-                // Verificar si el directorio existe
-                if (!$disk->exists($dirPath)) {
+                if (!$this->diskDirectoryExists($dirPath)) {
                     $results[$directory] = [
                         'success' => false,
                         'message' => 'El directorio no existe'
@@ -1303,25 +1329,26 @@ class ClientController extends Controller
                     continue;
                 }
 
-                // Eliminar el directorio y todo su contenido
-                $deleted = $disk->deleteDirectory($dirPath);
-
-                if ($deleted) {
-                    $results[$directory] = [
-                        'success' => true,
-                        'message' => 'Directorio eliminado correctamente'
-                    ];
-                    $deletedCount++;
-                    Log::info("Directorio eliminado: {$dirPath}");
-
-                    $this->logClientFolderChange('client_folder_deleted_mass', [
-                        'path' => $dirPath,
-                        'original_input' => $directory,
-                        'disk' => $this->disk_type,
-                    ]);
+                if ($this->disk_type === 'google') {
+                    $this->deleteGoogleDriveDirectory($disk, $dirPath);
                 } else {
-                    throw new \Exception("Error al eliminar el directorio");
+                    $this->deleteLocalDirectory($disk, $dirPath);
                 }
+
+                $this->forgetDirectoryListingCache($dirPath, $this->parentStoragePath($dirPath));
+
+                $results[$directory] = [
+                    'success' => true,
+                    'message' => 'Directorio eliminado correctamente'
+                ];
+                $deletedCount++;
+                Log::info("Directorio eliminado: {$dirPath}");
+
+                $this->logClientFolderChange('client_folder_deleted_mass', [
+                    'path' => $dirPath,
+                    'original_input' => $directory,
+                    'disk' => $this->disk_type,
+                ]);
 
             } catch (\Exception $e) {
                 $results[$directory] = [
@@ -1355,31 +1382,40 @@ class ClientController extends Controller
 
         $disk = $this->getDisk();
         $files = json_decode($request->input('files'), true);
+
+        if (!is_array($files)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Formato de archivos inválido'
+            ], 422);
+        }
+
         $results = [];
         $allSuccess = true;
         $deletedCount = 0;
 
         foreach ($files as $file) {
-            // Normalizar ruta
-            $filePath = trim($file, '/');
-            if (strpos($filePath, 'client_system/') !== 0) {
-                $filePath = 'client_system/' . $filePath;
-            }
+            $filePath = $this->normalizeClientSystemPath($file);
 
             try {
-                // Eliminar el archivo
-                $deleted = $disk->delete($filePath);
-
-                if ($deleted) {
+                if (!$this->diskFileExists($filePath)) {
                     $results[$file] = [
-                        'success' => true,
-                        'message' => 'Archivo eliminado correctamente'
+                        'success' => false,
+                        'message' => 'El archivo no existe'
                     ];
-                    $deletedCount++;
-                    Log::info("Archivo eliminado: {$filePath}");
-                } else {
-                    throw new \Exception("Error al eliminar el archivo");
+                    $allSuccess = false;
+                    continue;
                 }
+
+                $disk->delete($filePath);
+                $this->forgetDirectoryListingCache($this->parentStoragePath($filePath));
+
+                $results[$file] = [
+                    'success' => true,
+                    'message' => 'Archivo eliminado correctamente'
+                ];
+                $deletedCount++;
+                Log::info("Archivo eliminado: {$filePath}");
 
             } catch (\Exception $e) {
                 $results[$file] = [
