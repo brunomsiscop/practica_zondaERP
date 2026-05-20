@@ -269,12 +269,6 @@ class PagesController extends Controller
         ];
     }
 
-    public function loadingERP()
-    {
-        session(['loading-erp' => true]);
-        return view('loading-erp');
-    }
-
     /*public function schedule(Request $request): View
     {
         $start_date = null;

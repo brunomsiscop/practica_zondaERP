@@ -58,12 +58,7 @@ class AuthenticatedSessionController extends Controller
                     ? [] 
                     : ['section' => 1];
                 
-                // Guardar la información de redirección en la sesión
-                $request->session()->put('redirect_route', $redirectRoute);
-                $request->session()->put('route_params', $routeParams);
-                
-                // Redirigir a la pantalla de carga
-                return redirect()->route('loading-erp');
+                return redirect()->route($redirectRoute, $routeParams);
                 
             } else {
                 return redirect('/login')->withErrors([

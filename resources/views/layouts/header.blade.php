@@ -152,7 +152,7 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-gradiant-header px-3 mb-0 p-1">
     <div class="container-fluid">
         <!-- Logo del menú -->
-        <a href="{{ !auth()->check() ? '/' : (!auth()->user()->hasRole('Cliente') ? route('loading-erp') : route('client.index', ['section' => 1])) }}"
+        <a href="{{ !auth()->check() ? '/' : (!auth()->user()->hasRole('Cliente') ? route('dashboard') : route('client.index', ['section' => 1])) }}"
             class="navbar-brand">
             <img src="{{ asset('images/zonda/isotype_logo.png') }}" alt="Logo" class="img-fluid">
         </a>

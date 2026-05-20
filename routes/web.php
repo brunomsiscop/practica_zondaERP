@@ -1154,6 +1154,4 @@ Route::get('/google-drive/callback', [GoogleDriveController::class, 'handleGoogl
 Route::get('/google-drive/test', [GoogleDriveController::class, 'testConnection'])
     ->name('google.drive.test');
 
-Route::get('/loading-erp', [PagesController::class, 'loadingERP'])->name('loading-erp');
-
 require __DIR__ . '/auth.php';
