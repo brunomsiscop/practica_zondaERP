@@ -84,11 +84,8 @@ class GoogleDriveController extends Controller
 
 namespace App\Http\Controllers;
 
-use GuzzleHttp\Client as GuzzleClient;
-use Google\Client as GoogleClient;
-use Google\Service\Drive;
+use App\Services\GoogleDriveClientFactory;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class GoogleDriveController extends Controller
@@ -121,42 +118,16 @@ class GoogleDriveController extends Controller
 
     protected function getClient()
     {
-        $client = new GoogleClient();
-        $client->setHttpClient(new GuzzleClient([
-            'connect_timeout' => 10,
-            'timeout' => 30,
-            'read_timeout' => 30,
-        ]));
-        $client->setClientId(config('filesystems.disks.google.clientId'));
-        $client->setClientSecret(config('filesystems.disks.google.clientSecret'));
+        $client = app(GoogleDriveClientFactory::class)->makeAuthenticatedClient();
         $client->setRedirectUri(route('google.drive.callback'));
-        $client->addScope(Drive::DRIVE);
-        $client->setAccessType('offline');
-
-        // Recuperar refresh token desde base de datos, cache o .env
-        $refreshToken = env('GOOGLE_DRIVE_REFRESH_TOKEN');
-
-        if ($refreshToken) {
-            $client->refreshToken($refreshToken);
-        }
 
         return $client;
     }
 
     public function redirectToGoogle()
     {
-        $client = new GoogleClient();
-        $client->setHttpClient(new GuzzleClient([
-            'connect_timeout' => 10,
-            'timeout' => 30,
-            'read_timeout' => 30,
-        ]));
-        $client->setClientId(config('filesystems.disks.google.clientId'));
-        $client->setClientSecret(config('filesystems.disks.google.clientSecret'));
+        $client = app(GoogleDriveClientFactory::class)->makeClient();
         $client->setRedirectUri(route('google.drive.callback'));
-        $client->addScope(Drive::DRIVE);
-        $client->addScope(Drive::DRIVE_FILE);
-        $client->setAccessType('offline');
         $client->setPrompt('consent');
 
         return redirect($client->createAuthUrl());
@@ -164,16 +135,8 @@ class GoogleDriveController extends Controller
 
     public function handleGoogleCallback(Request $request)
     {
-        $client = new GoogleClient();
-        $client->setHttpClient(new GuzzleClient([
-            'connect_timeout' => 10,
-            'timeout' => 30,
-            'read_timeout' => 30,
-        ]));
-        $client->setClientId(config('filesystems.disks.google.clientId'));
-        $client->setClientSecret(config('filesystems.disks.google.clientSecret'));
+        $client = app(GoogleDriveClientFactory::class)->makeClient();
         $client->setRedirectUri(route('google.drive.callback'));
-        $client->addScope(Drive::DRIVE);
 
         if ($request->has('code')) {
             try {
@@ -213,7 +176,6 @@ class GoogleDriveController extends Controller
     {
         try {
             $client = $this->getClient();
-            $service = new Drive($client);
 
             // Puedes usar directamente el Storage disk si está bien configurado
             Storage::disk('google')->put('test-connection.txt', 'Conexión exitosa: ' . now());

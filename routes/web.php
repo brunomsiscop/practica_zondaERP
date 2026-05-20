@@ -1140,10 +1140,10 @@ Route::prefix('payrolls')
 Route::get('/snake', function () {
     return view('minigm.snake');
 });
+
 Route::get('/breakout', function () {
     return view('minigm.breakout');
 });
-
 
 Route::get('/google-drive/auth', [GoogleDriveController::class, 'redirectToGoogle'])
     ->name('google.drive.auth');

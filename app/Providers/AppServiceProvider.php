@@ -11,16 +11,15 @@ use App\Models\Quote;
 use App\Models\Tracking;
 use App\Observers\ModelObserver;
 use App\Observers\QuoteObserver;
+use App\Services\GoogleDriveClientFactory;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 
 use Illuminate\Support\Facades\Storage;
-use GuzzleHttp\Client as GuzzleClient;
 use League\Flysystem\Filesystem;
 use Masbug\Flysystem\GoogleDriveAdapter;
-use Google\Client as GoogleClient;
 use Google\Service\Drive;
 use Illuminate\Filesystem\FilesystemAdapter;
 
@@ -50,39 +49,7 @@ class AppServiceProvider extends ServiceProvider
         Tracking::observe(ModelObserver::class);
 
         Storage::extend('google', function ($app, $config) {
-            $client = new GoogleClient();
-            $client->setHttpClient(new GuzzleClient([
-                'connect_timeout' => 10,
-                'timeout' => 30,
-                'read_timeout' => 30,
-            ]));
-            
-            // Configuración OAuth 2.0
-            $client->setClientId($config['clientId']);
-            $client->setClientSecret($config['clientSecret']);
-            
-            if (!empty($config['refreshToken'])) {
-                try {
-                    // Intenta refrescar access token para evitar 401 al primer uso del disco.
-                    $token = $client->fetchAccessTokenWithRefreshToken($config['refreshToken']);
-
-                    if (is_array($token) && isset($token['error'])) {
-                        Log::error('Google Drive OAuth refresh failed while bootstrapping disk.', [
-                            'error' => $token['error'] ?? 'unknown_error',
-                            'error_description' => $token['error_description'] ?? null,
-                        ]);
-                    }
-                } catch (\Throwable $e) {
-                    Log::error('Google Drive OAuth refresh exception while bootstrapping disk.', [
-                        'message' => $e->getMessage(),
-                    ]);
-                }
-            } else {
-                Log::warning('Google Drive disk loaded without refresh token.');
-            }
-            
-            $client->addScope(Drive::DRIVE);
-            $client->addScope(Drive::DRIVE_FILE);
+            $client = $app->make(GoogleDriveClientFactory::class)->makeAuthenticatedClient($config);
 
             try {
                 $service = new Drive($client);
