@@ -16,6 +16,7 @@ use App\Models\WarehouseLot;
 use App\Models\WarehouseMovement;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class GraphicController extends Controller
@@ -70,6 +71,49 @@ class GraphicController extends Controller
         return $this->months;
     }
 
+    private function customerCountsForMonth(int $year, int $month): array
+    {
+        $counts = Cache::remember("charts.customers.month.{$year}.{$month}", now()->addMinutes(15), function () use ($year, $month) {
+            return Customer::query()
+                ->selectRaw('service_type_id, COUNT(*) as total')
+                ->whereYear('created_at', $year)
+                ->whereMonth('created_at', $month)
+                ->whereIn('service_type_id', [1, 2, 3])
+                ->groupBy('service_type_id')
+                ->pluck('total', 'service_type_id');
+        });
+
+        return [
+            (int) ($counts[1] ?? 0),
+            (int) ($counts[2] ?? 0),
+            (int) ($counts[3] ?? 0),
+        ];
+    }
+
+    private function customerCountsByYear(int $year): array
+    {
+        $rows = Cache::remember("charts.customers.year.{$year}", now()->addMinutes(15), function () use ($year) {
+            return Customer::query()
+                ->selectRaw('MONTH(created_at) as month, service_type_id, COUNT(*) as total')
+                ->whereYear('created_at', $year)
+                ->whereIn('service_type_id', [1, 2, 3])
+                ->groupByRaw('MONTH(created_at), service_type_id')
+                ->get();
+        });
+
+        $series = [
+            1 => array_fill(0, 12, 0),
+            2 => array_fill(0, 12, 0),
+            3 => array_fill(0, 12, 0),
+        ];
+
+        foreach ($rows as $row) {
+            $series[(int) $row->service_type_id][(int) $row->month - 1] = (int) $row->total;
+        }
+
+        return $series;
+    }
+
     public function index(Request $request)
     {
         $actualYear  = $request->input('year', Carbon::now()->year);
@@ -118,24 +162,10 @@ class GraphicController extends Controller
     public function totalCustomersByYear($year = null)
     {
         $year          = $year ?? Carbon::now()->year; // Usa el año proporcionado o el año actual por defecto
-        $monthlyTotals = [];
-
-        for ($month = 1; $month <= 12; $month++) {
-            $domestics[] = Customer::whereMonth('created_at', $month)
-                ->whereYear('created_at', $year)
-                ->where('service_type_id', 1)
-                ->count();
-
-            $comercials[] = Customer::whereMonth('created_at', $month)
-                ->whereYear('created_at', $year)
-                ->where('service_type_id', 2)
-                ->count();
-
-            $industrials[] = Customer::whereMonth('created_at', $month)
-                ->whereYear('created_at', $year)
-                ->where('service_type_id', 3)
-                ->count();
-        }
+        $customerCounts = $this->customerCountsByYear((int) $year);
+        $domestics = $customerCounts[1];
+        $comercials = $customerCounts[2];
+        $industrials = $customerCounts[3];
 
         $chart = new TotalCustomersChart;
         $chart->labels([
@@ -244,23 +274,7 @@ class GraphicController extends Controller
         $month = Carbon::now()->month;
         $year  = Carbon::now()->year;
 
-        // Filtrar los datos por mes y año
-        $domestics = Customer::whereMonth('created_at', $month)
-            ->whereYear('created_at', $year)
-            ->where('service_type_id', 1)
-            ->count();
-
-        $comercials = Customer::whereMonth('created_at', $month)
-            ->whereYear('created_at', $year)
-            ->where('service_type_id', 2)
-            ->count();
-
-        $industrials = Customer::whereMonth('created_at', $month)
-            ->whereYear('created_at', $year)
-            ->where('service_type_id', 3)
-            ->count();
-
-        $counts = [$domestics, $comercials, $industrials];
+        $counts = $this->customerCountsForMonth((int) $year, (int) $month);
 
         $chart = new SampleChart;
         $chart->dataset('Nuevos Clientes', 'bar', $counts)
@@ -280,22 +294,7 @@ class GraphicController extends Controller
             'year'  => 'required|integer|min:2000|max:' . Carbon::now()->year,
         ]);
 
-        $domestics = Customer::whereMonth('created_at', $month)
-            ->whereYear('created_at', $year)
-            ->where('service_type_id', 1)
-            ->count();
-
-        $comercials = Customer::whereMonth('created_at', $month)
-            ->whereYear('created_at', $year)
-            ->where('service_type_id', 2)
-            ->count();
-
-        $industrials = Customer::whereMonth('created_at', $month)
-            ->whereYear('created_at', $year)
-            ->where('service_type_id', 3)
-            ->count();
-
-        $counts = [$domestics, $comercials, $industrials];
+        $counts = $this->customerCountsForMonth((int) $year, (int) $month);
 
         $chart = new SampleChart;
         $chart->labels(['Domésticos', 'Comerciales', 'Industrial/Planta']);
@@ -333,27 +332,11 @@ class GraphicController extends Controller
 
     public function newCustomersByYear()
     {
-        $year        = Carbon::now()->year;
-        $domestics   = [];
-        $comercials  = [];
-        $industrials = [];
-
-        for ($month = 1; $month <= 12; $month++) {
-            $domestics[] = Customer::whereMonth('created_at', $month)
-                ->whereYear('created_at', $year)
-                ->where('service_type_id', 1)
-                ->count();
-
-            $comercials[] = Customer::whereMonth('created_at', $month)
-                ->whereYear('created_at', $year)
-                ->where('service_type_id', 2)
-                ->count();
-
-            $industrials[] = Customer::whereMonth('created_at', $month)
-                ->whereYear('created_at', $year)
-                ->where('service_type_id', 3)
-                ->count();
-        }
+        $year = Carbon::now()->year;
+        $customerCounts = $this->customerCountsByYear((int) $year);
+        $domestics = $customerCounts[1];
+        $comercials = $customerCounts[2];
+        $industrials = $customerCounts[3];
 
         $chart = new SampleChart;
         $chart->labels([
@@ -388,27 +371,11 @@ class GraphicController extends Controller
 
     public function refreshNewCustomersByYear(Request $request)
     {
-        $year        = $request->input('year');
-        $domestics   = [];
-        $comercials  = [];
-        $industrials = [];
-
-        for ($month = 1; $month <= 12; $month++) {
-            $domestics[] = Customer::whereMonth('created_at', $month)
-                ->whereYear('created_at', $year)
-                ->where('service_type_id', 1)
-                ->count();
-
-            $comercials[] = Customer::whereMonth('created_at', $month)
-                ->whereYear('created_at', $year)
-                ->where('service_type_id', 2)
-                ->count();
-
-            $industrials[] = Customer::whereMonth('created_at', $month)
-                ->whereYear('created_at', $year)
-                ->where('service_type_id', 3)
-                ->count();
-        }
+        $year = (int) $request->input('year');
+        $customerCounts = $this->customerCountsByYear($year);
+        $domestics = $customerCounts[1];
+        $comercials = $customerCounts[2];
+        $industrials = $customerCounts[3];
 
         $chart = new SampleChart;
         $chart->labels([
@@ -850,16 +817,18 @@ class GraphicController extends Controller
     public function ordersDataset()
     {
         $month  = Carbon::now()->month;
-        $counts = [0, 0];
-        $orders = Order::whereMonth('programmed_date', $month)->get();
-        foreach ($orders as $order) {
-            if ($order->customer->service_type_id == 1) {
-                $counts[0]++;
-            }
-            if ($order->customer->service_type_id == 2) {
-                $counts[1]++;
-            }
-        }
+        $countsByType = Order::query()
+            ->join('customer', 'order.customer_id', '=', 'customer.id')
+            ->whereMonth('order.programmed_date', $month)
+            ->whereIn('customer.service_type_id', [1, 2])
+            ->selectRaw('customer.service_type_id as service_type_id, COUNT(*) as total')
+            ->groupBy('customer.service_type_id')
+            ->pluck('total', 'service_type_id');
+
+        $counts = [
+            (int) ($countsByType[1] ?? 0),
+            (int) ($countsByType[2] ?? 0),
+        ];
 
         $chart = new SampleChart;
         $chart->dataset('Scheduled Orders', 'doughnut', $counts)->backgroundColor($this->colors)->color($this->colors);
@@ -870,16 +839,18 @@ class GraphicController extends Controller
     public function refreshOrders(Request $request)
     {
         $month  = $request->input('month');
-        $counts = [];
-        $orders = Order::whereMonth('programmed_date', $month)->get();
-        foreach ($orders as $order) {
-            if ($order->customer->service_type_id == 1) {
-                $counts[0]++;
-            }
-            if ($order->customer->service_type_id == 2) {
-                $counts[1]++;
-            }
-        }
+        $countsByType = Order::query()
+            ->join('customer', 'order.customer_id', '=', 'customer.id')
+            ->whereMonth('order.programmed_date', $month)
+            ->whereIn('customer.service_type_id', [1, 2])
+            ->selectRaw('customer.service_type_id as service_type_id, COUNT(*) as total')
+            ->groupBy('customer.service_type_id')
+            ->pluck('total', 'service_type_id');
+
+        $counts = [
+            (int) ($countsByType[1] ?? 0),
+            (int) ($countsByType[2] ?? 0),
+        ];
 
         $chart = new SampleChart;
         $chart->dataset('Scheduled Orders', 'doughnut', $counts)->backgroundColor($this->colors)->color($this->colors);
@@ -902,20 +873,16 @@ class GraphicController extends Controller
     public function orderTypesDataset($service_type)
     {
         $month       = Carbon::now()->month;
-        $counts      = [0, 0];
-        $customerIds = [];
+        $scheduledCustomers = Order::query()
+            ->join('customer', 'order.customer_id', '=', 'customer.id')
+            ->whereMonth('order.programmed_date', $month)
+            ->where('customer.service_type_id', $service_type)
+            ->distinct('order.customer_id')
+            ->count('order.customer_id');
 
-        $orders    = Order::whereMonth('programmed_date', $month)->get();
         $customers = Customer::whereMonth('created_at', $month)->where('service_type_id', $service_type)->where('general_sedes', 0)->count();
 
-        foreach ($orders as $order) {
-            if ($order->customer->service_type_id == $service_type) {
-                $customerIds[] = $order->customer_id;
-            }
-        }
-
-        $counts[0] = count(array_unique($customerIds));
-        $counts[1] = $customers;
+        $counts = [$scheduledCustomers, $customers];
 
         $chart = new SampleChart;
         $chart->dataset('Clientes', 'bar', $counts)->backgroundColor($this->colors)->color($this->colors);
@@ -927,20 +894,16 @@ class GraphicController extends Controller
     {
         $month = $request->input('month');
 
-        $counts      = [0, 0];
-        $customerIds = [];
+        $scheduledCustomers = Order::query()
+            ->join('customer', 'order.customer_id', '=', 'customer.id')
+            ->whereMonth('order.programmed_date', $month)
+            ->where('customer.service_type_id', $service_type)
+            ->distinct('order.customer_id')
+            ->count('order.customer_id');
 
-        $orders    = Order::whereMonth('programmed_date', $month)->get();
         $customers = Customer::whereMonth('created_at', $month)->where('service_type_id', $service_type)->where('general_sedes', 0)->count();
 
-        foreach ($orders as $order) {
-            if ($order->customer->service_type_id == $service_type) {
-                $customerIds[] = $order->customer_id;
-            }
-        }
-
-        $counts[0] = count(array_unique($customerIds));
-        $counts[1] = $customers;
+        $counts = [$scheduledCustomers, $customers];
 
         $chart = new SampleChart;
         $chart->dataset('Clientes', 'bar', $counts)->backgroundColor($this->colors)->color($this->colors);

@@ -3,7 +3,7 @@
     <div class="card">
         <div class="card-header">
             <div class="d-flex justify-content-between align-items-center gap-2">
-                <h5 class="card-title fw-bold mb-0">Busqueda Avanzada</h5>
+                <h5 class="card-title fw-bold mb-0"><i class="bi bi-funnel-fill"></i> Busqueda Avanzada</h5>
                 <button class="btn btn-outline-dark btn-sm" type="button" data-bs-toggle="collapse"
                     data-bs-target=".multi-collapse" aria-expanded="false"
                     aria-controls="multiCollapseExample1 multiCollapseExample2">
@@ -88,12 +88,12 @@
 
         <div class="card-footer collapse multi-collapse">
             <div class="row justify-content-end">
-                <div class="col-lg-2 col-6">
+                <div class="col-lg-1 col-6">
                     <button type="submit" class="btn btn-primary btn-sm w-100">
                         <i class="bi bi-funnel-fill"></i> Filtrar
                     </button>
                 </div>
-                <div class="col-lg-2 col-6">
+                <div class="col-lg-1 col-6">
                     <a href="{{ route('service.index') }}" class="btn btn-secondary btn-sm w-100">
                         <i class="bi bi-arrow-counterclockwise"></i> Limpiar
                     </a>

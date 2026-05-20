@@ -72,12 +72,10 @@ class Order extends Model
     // Definir la relaci贸n hasManyThrough con el modelo Technician
     public function technicians()
     {
-        return $this->hasManyThrough(
+        return $this->belongsToMany(
             Technician::class,
-            OrderTechnician::class,
+            'order_technician',
             'order_id',
-            'id',
-            'id',
             'technician_id'
         );
     }
@@ -94,23 +92,14 @@ class Order extends Model
 
     public function getNameTechnicians()
     {
-        // Obtener los IDs de técnicos desde OrderTechnician
-        $technicianIds = OrderTechnician::where('order_id', $this->id)
-            ->pluck('technician_id')
-            ->toArray();
+        $technicians = $this->relationLoaded('technicians')
+            ? $this->technicians
+            : $this->technicians()->with('user:id,name')->get();
 
-        if (empty($technicianIds)) {
-            return collect([]);
-        }
-
-        // Obtener los user_ids desde la tabla technician
-        $userIds = Technician::whereIn('id', $technicianIds)
-            ->pluck('user_id')
-            ->toArray();
-
-        // Obtener los usuarios
-        $technicians = User::whereIn('id', $userIds)->get();
-        return $technicians;
+        return $technicians
+            ->pluck('user')
+            ->filter()
+            ->values();
     }
 
     public function allTechnicians()

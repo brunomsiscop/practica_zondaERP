@@ -9,6 +9,7 @@ use App\Models\PestCatalog;
 use App\Models\PestCategory;
 use Psy\CodeCleaner\IssetPass;
 use Symfony\Contracts\Service\Attribute\Required;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
 class PestController extends Controller
@@ -19,8 +20,13 @@ class PestController extends Controller
 
     public function index(): View
     {
-        $pests = PestCatalog::orderBy('id', 'desc')->paginate($this->size);
-        $pest_categories = PestCategory::orderBy('category')->get();
+        $pests = PestCatalog::with('pestCategory:id,category')
+            ->orderBy('id', 'desc')
+            ->paginate($this->size);
+
+        $pest_categories = Cache::remember('catalog.pest_categories.ordered', now()->addHour(), function () {
+            return PestCategory::orderBy('category')->get(['id', 'category']);
+        });
         return view('pest.index', compact('pests', 'pest_categories'));
     }
     public function create()
@@ -107,8 +113,15 @@ class PestController extends Controller
             $query_pests = $query_pests->where('pest_category_id', $request->category_id);
         }
 
-        $pests = $query_pests->orderBy('name', $direction ?? 'DESC')->paginate($size ?? $this->size)->appends($request->all());
-        $pest_categories = PestCategory::orderBy('category')->get();
+        $pests = $query_pests
+            ->with('pestCategory:id,category')
+            ->orderBy('name', $direction ?? 'DESC')
+            ->paginate($size ?? $this->size)
+            ->appends($request->all());
+
+        $pest_categories = Cache::remember('catalog.pest_categories.ordered', now()->addHour(), function () {
+            return PestCategory::orderBy('category')->get(['id', 'category']);
+        });
 
         return view(
             'pest.index',

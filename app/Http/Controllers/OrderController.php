@@ -79,7 +79,13 @@ class OrderController extends Controller
             ->orderBy('programmed_date')
             ->orderBy('customer.name', 'ASC')
             ->select('order.*')
-            ->with('customer') // Para cargar la relación
+            ->with([
+                'customer:id,name',
+                'services:id,name',
+                'status:id,name',
+                'closeUser:id,name',
+                'technicians.user:id,name',
+            ])
             ->paginate($this->size);
 
         $order_status = OrderStatus::all();

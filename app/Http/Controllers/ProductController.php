@@ -25,6 +25,7 @@ use App\Models\Dosage;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
 
@@ -97,8 +98,15 @@ class ProductController extends Controller
         // Tamaño de página
         $size = $request->input('size', $this->size);
 
-        $products = $query->orderBy('id', $direction)->paginate($size);
-        $presentations = Presentation::all();
+        $products = $query
+            ->with(['presentation:id,name', 'metric:id,value'])
+            ->orderBy('id', $direction)
+            ->paginate($size)
+            ->withQueryString();
+
+        $presentations = Cache::remember('catalog.presentations.all', now()->addHour(), function () {
+            return Presentation::orderBy('name')->get(['id', 'name']);
+        });
         return view('product.index', compact('products', 'presentations', 'navigation'));
     }
 
@@ -473,8 +481,15 @@ class ProductController extends Controller
 		}
 
 
-		$products = $query_products->orderBy('name', $direction ?? 'DESC')->paginate($size ?? $this->size)->appends($request->all());
-        $presentations = Presentation::all();
+		$products = $query_products
+            ->with(['presentation:id,name', 'metric:id,value'])
+            ->orderBy('name', $direction ?? 'DESC')
+            ->paginate($size ?? $this->size)
+            ->appends($request->all());
+
+        $presentations = Cache::remember('catalog.presentations.all', now()->addHour(), function () {
+            return Presentation::orderBy('name')->get(['id', 'name']);
+        });
 
 		return view(
 			'product.index',

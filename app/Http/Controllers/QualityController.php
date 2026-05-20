@@ -147,8 +147,11 @@ class QualityController extends Controller
     {
         $pendings = [];
         $count_devices = 0;
-        $customer = Customer::find($id);
-        $orders = $customer->orders()->where('status_id', 1)->get();
+        $customer = Customer::with(['floorplans', 'contracts'])->find($id);
+        $orders = $customer->orders()
+            ->with(['services:id,name'])
+            ->where('status_id', 1)
+            ->get();
         $opportunity_areas = OpportunityArea::where('customer_id', $customer->id)->get();
         $floorplans = $customer->floorplans;
         $rotation_plans = RotationPlan::where('customer_id', $customer->id)->get();
@@ -403,7 +406,13 @@ class QualityController extends Controller
         $sortBy = $request->input('sort_by', 'programmed_date');
         $sortDirection = $request->input('sort_direction', 'desc');
 
-        $orders = Order::where('customer_id', $id);
+        $orders = Order::with([
+            'customer:id,name',
+            'services:id,name',
+            'status:id,name',
+            'closeUser:id,name',
+            'technicians.user:id,name',
+        ])->where('customer_id', $id);
 
         if ($date) {
             [$startDate, $endDate] = array_map(function ($d) {

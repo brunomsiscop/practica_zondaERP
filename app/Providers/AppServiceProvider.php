@@ -36,7 +36,9 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        DB::enableQueryLog();
+        if ($this->app->environment('local')) {
+            DB::enableQueryLog();
+        }
 
         Customer::observe(ModelObserver::class);
         Lead::observe(ModelObserver::class);

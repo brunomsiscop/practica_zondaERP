@@ -1184,12 +1184,9 @@ class ClientController extends Controller
     {
         try {
             $disk = $this->getDisk();
-            if ($this->diskFileExists($path)) {
-                $disk->delete($path);
-                return back();
-            }
+            $disk->delete($path);
 
-            return response()->json(['error' => 'File not found.'], 404);
+            return back();
         } catch (\Exception $e) {
             return response()->json(['error' => 'An error occurred while deleting the file.'], 500);
         }
@@ -1292,16 +1289,6 @@ class ClientController extends Controller
             }
 
             try {
-                // Verificar si el archivo existe
-                if (!$disk->exists($filePath)) {
-                    $results[$file] = [
-                        'success' => false,
-                        'message' => 'El archivo no existe'
-                    ];
-                    $allSuccess = false;
-                    continue;
-                }
-
                 // Eliminar el archivo
                 $deleted = $disk->delete($filePath);
 
