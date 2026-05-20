@@ -60,13 +60,54 @@
         signaturePad.clear();
     }
 
-    // Función para convertir imagen a base64
+    function canvasToJpeg(canvas, quality) {
+        return canvas.toDataURL('image/jpeg', quality);
+    }
+
+    function estimateBase64Size(base64String) {
+        return Math.floor((base64String.length * 3) / 4);
+    }
+
+    // Función para convertir imagen a base64 comprimido
     function convertImageToBase64(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
+            reader.onload = () => {
+                const img = new Image();
+
+                img.onload = () => {
+                    const maxWidth = 800;
+                    const scale = img.width > maxWidth ? maxWidth / img.width : 1;
+                    const width = Math.round(img.width * scale);
+                    const height = Math.round(img.height * scale);
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.fillStyle = '#fff';
+                    ctx.fillRect(0, 0, width, height);
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    let base64Image = canvasToJpeg(canvas, 0.8);
+
+                    if (estimateBase64Size(base64Image) > 2 * 1024 * 1024) {
+                        base64Image = canvasToJpeg(canvas, 0.65);
+                    }
+
+                    if (estimateBase64Size(base64Image) > 2 * 1024 * 1024) {
+                        reject(new Error('La imagen procesada es muy grande. Por favor, usa una imagen más pequeña.'));
+                        return;
+                    }
+
+                    resolve(base64Image);
+                };
+
+                img.onerror = () => reject(new Error('No se pudo cargar la imagen.'));
+                img.src = reader.result;
+            };
             reader.onerror = error => reject(error);
+            reader.readAsDataURL(file);
         });
     }
 
@@ -107,8 +148,7 @@
                 try {
                     base64Image = await convertImageToBase64(imageFile);
                 } catch (error) {
-                    alert("Error al procesar la imagen");
-                    //console.error(error);
+                    alert(error.message || "Error al procesar la imagen");
                     return;
                 }
             }
@@ -120,8 +160,6 @@
                 signature: base64Signature,
                 image: base64Image
             };
-
-            console.log('Datos a enviar:', data);
 
             $.ajax({
                 url: "{{ route('client.report.signature.store') }}",
