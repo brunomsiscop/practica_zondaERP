@@ -95,7 +95,7 @@ class OrderController extends Controller
         $orders = Order::with('customer', 'services', 'status', 'closeUser', 'technicians')->orderByRaw("CAST(SUBSTRING_INDEX(`order`.`folio`, '-', -1) AS UNSIGNED) ASC")
             ->orderBy('programmed_date')->paginate($this->size);
 
-        /*$order_status = OrderStatus::all();
+        $order_status = OrderStatus::all();
         $size = $this->size;
 
         $customer_ranges = Customer::where('general_sedes', '!=', 0)->orWhere('service_type_id', 1)->orderBy('name', 'asc')->get();
@@ -118,9 +118,7 @@ class OrderController extends Controller
                 'technicians',
                 'navigation'
             )
-        );*/
-
-        dd($orders);
+        );
     }
 
     public function create(): View
