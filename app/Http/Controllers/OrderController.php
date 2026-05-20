@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\Administrative;
@@ -20,6 +21,7 @@ use App\Models\Technician;
 use App\Models\User;
 use Carbon\Carbon;
 use Google\Service\AnalyticsData\OrderBy;
+use Google\Service\Dfareporting\Resource\Orders;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -74,19 +76,24 @@ class OrderController extends Controller
 
     public function index(): View
     {
-        $orders = Order::join('customer', 'order.customer_id', '=', 'customer.id')
-            ->orderByRaw("CAST(SUBSTRING_INDEX(folio, '-', -1) AS UNSIGNED) ASC")
-            ->orderBy('programmed_date')
-            ->orderBy('customer.name', 'ASC')
-            ->select('order.*')
-            ->with([
+        /*$orders = Order::with([
                 'customer:id,name',
                 'services:id,name',
                 'status:id,name',
                 'closeUser:id,name',
                 'technicians.user:id,name',
             ])
-            ->paginate($this->size);
+            ->orderByRaw("CAST(SUBSTRING_INDEX(`order`.`folio`, '-', -1) AS UNSIGNED) ASC")
+            ->orderBy('programmed_date')
+            ->orderBy(
+                Customer::select('name')
+                    ->whereColumn('customer.id', 'order.customer_id'),
+                'ASC'
+            )
+            ->paginate($this->size);*/
+
+        $orders = Order::with('customer', 'services', 'status', 'closeUser', 'technicians')->orderByRaw("CAST(SUBSTRING_INDEX(`order`.`folio`, '-', -1) AS UNSIGNED) ASC")
+            ->orderBy('programmed_date')->paginate($this->size);
 
         /*$order_status = OrderStatus::all();
         $size = $this->size;
@@ -319,7 +326,7 @@ class OrderController extends Controller
 
         $size = $size ?? $this->size;
         $order_status = OrderStatus::all();
-        $orders = $orders/*->orderByRaw("CAST(SUBSTRING_INDEX(folio, '-', -1) AS UNSIGNED) ASC")*/ ->orderBy('programmed_date')->paginate($size)->appends([
+        $orders = $orders/*->orderByRaw("CAST(SUBSTRING_INDEX(folio, '-', -1) AS UNSIGNED) ASC")*/->orderBy('programmed_date')->paginate($size)->appends([
             'customer' => $customer,
             'date' => $date,
             'time' => $time,
@@ -643,11 +650,9 @@ class OrderController extends Controller
                     'view'
                 )
             );
-
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             $error = 'La orden no fue encontrada.';
             return redirect()->route('order.index')->with('error', $error);
-
         } catch (\Exception $e) {
             // Log del error
             Log::error('Error en OrderController@edit - ID: ' . $id . ' - Error: ' . $e->getMessage());
@@ -821,7 +826,6 @@ class OrderController extends Controller
             Log::info("OrderController@update - Actualización completada exitosamente", ['order_id' => $id]);
 
             return back()->with('success', 'Orden actualizada correctamente');
-
         } catch (\Exception $e) {
             Log::error("OrderController@update - Error durante actualización", [
                 'order_id' => $id,
@@ -1070,7 +1074,6 @@ class OrderController extends Controller
                 'orders' => $orders->pluck('id')->toArray(),
                 'show' => count($tech_data) > 0,
             ], 200);
-
         } catch (\Exception $e) {
             // Log del error (recomendado)
             Log::error('Error en getTechniciansInRange: ' . $e->getMessage());
