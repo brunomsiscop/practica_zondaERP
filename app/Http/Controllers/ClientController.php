@@ -570,12 +570,30 @@ class ClientController extends Controller
 
     public function storeFile(Request $request)
     {
+        $request->validate([
+            'path' => 'required|string',
+            'files' => 'required|array|max:5',
+            'files.*' => 'file|max:2048',
+        ], [
+            'files.max' => 'Solo puedes subir hasta 5 archivos por carga.',
+            'files.*.max' => 'Cada archivo debe pesar máximo 2 MB.',
+        ]);
+
         $file_path = trim($request->input('path'), '/');
         $files = $request->file('files');
-        $maxFileSize = 5 * 1024 * 1024; // 5 MB en bytes
+        $maxFileSize = 2 * 1024 * 1024; // 2 MB por archivo
+        $maxTotalSize = 10 * 1024 * 1024; // 5 archivos de 2 MB
 
         if (!$files || count($files) === 0) {
             return redirect()->back()->withErrors(['files' => 'No files uploaded.']);
+        }
+
+        $totalUploadSize = array_sum(array_map(fn($file) => $file->getSize(), $files));
+
+        if ($totalUploadSize > $maxTotalSize) {
+            return redirect()->back()->withErrors([
+                'files' => 'El total de la carga no debe superar 10 MB.',
+            ]);
         }
 
         $disk = $this->getDisk();
@@ -604,7 +622,7 @@ class ClientController extends Controller
             }
 
             if ($file->getSize() > $maxFileSize) {
-                $errors[] = 'El archivo ' . $file->getClientOriginalName() . ' excede el límite de 5 MB.';
+                $errors[] = 'El archivo ' . $file->getClientOriginalName() . ' excede el límite de 2 MB.';
                 continue;
             }
 

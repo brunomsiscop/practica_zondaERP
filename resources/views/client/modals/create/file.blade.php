@@ -23,6 +23,7 @@
                                 class="w-100 h-100 d-flex flex-column justify-content-center align-items-center">
                                 <span class="fs-1"><i class="bi bi-file-earmark-arrow-up"></i></span>
                                 <span class="fw-bold"> Selecciona o arrastra tus archivos </span>
+                                <span class="small text-muted">Máximo 5 archivos, 2 MB por archivo</span>
                             </label>
                         </div>
                     </div>
@@ -59,7 +60,8 @@
         const fileInput = $('#fileInput');
         const fileList = $('#file-list');
         const fileSizeAlert = $('#file-size-alert');
-        const maxFileSize = 5 * 1024 * 1024;
+        const maxFileSize = 2 * 1024 * 1024;
+        const maxFiles = 5;
         let currentFiles = []; // Mantener un registro de los archivos actuales
         let isSubmitting = false;
 
@@ -130,8 +132,14 @@
         function addFiles(newFiles) {
             const filesToAdd = Array.from(newFiles);
             const oversizedFiles = [];
+            const limitExceededFiles = [];
 
             filesToAdd.forEach(newFile => {
+                if (currentFiles.length >= maxFiles) {
+                    limitExceededFiles.push(newFile);
+                    return;
+                }
+
                 if (newFile.size > maxFileSize) {
                     oversizedFiles.push(newFile);
                     return;
@@ -149,8 +157,8 @@
                 }
             });
 
-            if (oversizedFiles.length > 0) {
-                renderSizeWarnings(oversizedFiles);
+            if (oversizedFiles.length > 0 || limitExceededFiles.length > 0) {
+                renderFileWarnings(oversizedFiles, limitExceededFiles);
             } else {
                 clearSizeWarnings();
             }
@@ -159,17 +167,23 @@
             updateFileList();
         }
 
-        function renderSizeWarnings(oversizedFiles) {
+        function renderFileWarnings(oversizedFiles, limitExceededFiles) {
             const listItems = oversizedFiles.map(file =>
-                `<li><strong>${file.name}</strong>: ${formatFileSize(file.size)} (máximo permitido: 5 MB)</li>`
-            ).join('');
+                `<li><strong>${file.name}</strong>: ${formatFileSize(file.size)} (máximo permitido: 2 MB)</li>`
+            );
+
+            const limitItems = limitExceededFiles.map(file =>
+                `<li><strong>${file.name}</strong>: no se agregó porque solo se permiten ${maxFiles} archivos.</li>`
+            );
+
+            const warnings = listItems.concat(limitItems).join('');
 
             fileSizeAlert
                 .removeClass('d-none')
                 .html(
                     `<div class="alert alert-warning mb-0" role="alert">
-                        <strong>Algunos archivos no se agregaron por tamaño:</strong>
-                        <ul class="mb-0 mt-2">${listItems}</ul>
+                        <strong>Algunos archivos no se agregaron:</strong>
+                        <ul class="mb-0 mt-2">${warnings}</ul>
                     </div>`
                 );
         }
