@@ -36,7 +36,7 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        if ($this->app->environment('local')) {
+        /*if ($this->app->environment('local')) {
             DB::enableQueryLog();
         }
 
@@ -46,7 +46,21 @@ class AppServiceProvider extends ServiceProvider
         Order::observe(ModelObserver::class);
         Quote::observe(ModelObserver::class);
         Quote::observe(QuoteObserver::class);
-        Tracking::observe(ModelObserver::class);
+        Tracking::observe(ModelObserver::class);*/
+
+        if (env('LOG_SLOW_QUERIES', false)) {
+            DB::listen(function ($query) {
+                if ($query->time > 500) {
+                    Log::warning('Query lenta', [
+                        'sql' => $query->sql,
+                        'time_ms' => $query->time,
+                        'bindings' => $query->bindings,
+                        'url' => request()->fullUrl(),
+                        'method' => request()->method(),
+                    ]);
+                }
+            });
+        }
 
         Storage::extend('google', function ($app, $config) {
             $client = $app->make(GoogleDriveClientFactory::class)->makeAuthenticatedClient($config);

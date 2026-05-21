@@ -251,7 +251,7 @@ class AppController extends Controller
 						'id' => $service->id,
 						'prefix' => $service->id == 51 && empty($serviceWithDevices) ? 4 : $service->prefix,
 						'name' => $service->name,
-					'description' => $this->cleanHtml($order->propagateByService($service->id)->text ?? $service->description),
+						'description' => $this->cleanHtml($order->propagateByService($service->id)->text ?? $service->description),
 						'pests' => $pests->toArray(),
 						'products' => $products->toArray(),
 						'application_methods' => $application_methods->toArray(),
@@ -455,7 +455,7 @@ class AppController extends Controller
 						->delete();
 				}
 
-				if ($reviews_has_products && $reviews_has_pests) {
+				if ($reviews_has_products /*&& $reviews_has_pests*/) {
 					$products_data = [];
 
 					$dps = DeviceProduct::where('order_id', $order->id)->get();
