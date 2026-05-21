@@ -51,13 +51,15 @@ class AppServiceProvider extends ServiceProvider
         if (env('LOG_SLOW_QUERIES', false)) {
             DB::listen(function ($query) {
                 if ($query->time > 500) {
-                    Log::warning('Query lenta', [
+                    $context = [
                         'sql' => $query->sql,
                         'time_ms' => $query->time,
                         'bindings' => $query->bindings,
                         'url' => request()->fullUrl(),
-                        'method' => request()->method(),
-                    ]);
+                        'route' => request()->route()?->getName(),
+                    ];
+
+                    Log::warning('Query lenta detectada', $context);
                 }
             });
         }
