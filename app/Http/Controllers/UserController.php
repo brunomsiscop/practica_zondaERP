@@ -13,6 +13,7 @@ use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
 use Spatie\SimpleExcel\SimpleExcelWriter;
 
+use App\Services\GoogleDriveCachedService;
 use App\Models\Administrative;
 use App\Models\Branch;
 use App\Models\Company;
@@ -41,10 +42,12 @@ class UserController extends Controller
 	private $size = 50;
 
 	private $disk;
+	private GoogleDriveCachedService $googleDriveCache;
 
-	public function __construct()
+	public function __construct(GoogleDriveCachedService $googleDriveCache)
 	{
 		$this->disk = Storage::disk('public');
+		$this->googleDriveCache = $googleDriveCache;
 	}
 
 	public static function verifyData($user, $hasContract)
@@ -69,9 +72,10 @@ class UserController extends Controller
 	private function listDirectoriesRecursively($path)
 	{
 		$directories = [];
+		$disk = Storage::disk('google');
 
-		if (Storage::disk('google')->exists($path)) {
-			$subdirectories = Storage::disk('google')->directories($path);
+		if ($this->googleDriveCache->rememberDirectoryExists($disk, $path)) {
+			[$subdirectories] = $this->googleDriveCache->rememberDirectoryListing($disk, $path);
 			foreach ($subdirectories as $directory) {
 				$directories[] = [
 					'name' => basename($directory),
@@ -143,7 +147,7 @@ class UserController extends Controller
 	public function createClient(): View
 	{
 		$disk = Storage::disk('google');
-		$local_dirs = $disk->directories($this->path);
+		[$local_dirs] = $this->googleDriveCache->rememberDirectoryListing($disk, $this->path);
 		sort($local_dirs);
 
 		$navigation = [
@@ -405,7 +409,7 @@ class UserController extends Controller
 		}
 
 		$disk = Storage::disk('google');
-		$local_dirs = $disk->directories($this->path);
+		[$local_dirs] = $this->googleDriveCache->rememberDirectoryListing($disk, $this->path);
 		sort($local_dirs);
 
 		$clients = $clients_data;
@@ -734,7 +738,7 @@ class UserController extends Controller
 		try {
 			$path = $request->input('path');
 			$disk = Storage::disk('google');
-			$dirs = $disk->directories($path);
+			[$dirs] = $this->googleDriveCache->rememberDirectoryListing($disk, $path);
 			sort($dirs);
 
 			$data = [
