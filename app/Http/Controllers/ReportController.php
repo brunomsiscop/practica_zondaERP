@@ -303,12 +303,36 @@ class ReportController extends Controller
         $updated_order_products = [];
         $updated_wos = [];
 
-        $mult_factor = 1;
-
         $warehouse = $technician ? Warehouse::where('technician_id', $technician->id)->first() : null;
+        $productIds = collect($products_data)->pluck('product_id')->filter()->unique()->values();
+        $products = ProductCatalog::whereIn('id', $productIds)->get()->keyBy('id');
+        $wm = null;
+
+        if ($warehouse && count($products_data) > 0) {
+            $wm = WarehouseMovement::updateOrCreate(
+                [
+                    'warehouse_id' => $warehouse->id,
+                    'destination_warehouse_id' => null,
+                    'movement_id' => 8,
+                    'observations' => 'Movimiento realizado en la order #' . $order->folio . ' | ID: ' . $order->id,
+                ],
+                [
+                    'user_id' => $user->id,
+                    'date' => now(),
+                    'time' => now(),
+                    'updated_at' => now()
+                ]
+            );
+        }
+
         foreach ($products_data as $product_data) {
-            $wm = null;
-            $product = ProductCatalog::find($product_data['product_id']);
+            $mult_factor = 1;
+            $product = $products->get($product_data['product_id']);
+
+            if (!$product) {
+                continue;
+            }
+
             $op = OrderProduct::updateOrCreate([
                 'order_id' => $order->id,
                 'service_id' => $product_data['service_id'],
@@ -335,22 +359,7 @@ class ReportController extends Controller
                 $mult_factor = 1000;
             }
 
-            if ($warehouse) {
-                $wm = WarehouseMovement::updateOrCreate(
-                    [
-                        'warehouse_id' => $warehouse->id,
-                        'destination_warehouse_id' => null,
-                        'movement_id' => 8,
-                        'observations' => 'Movimiento realizado en la order #' . $order->folio . ' | ID: ' . $order->id,
-                    ],
-                    [
-                        'user_id' => $user->id,
-                        'date' => now(),
-                        'time' => now(),
-                        'updated_at' => now()
-                    ]
-                );
-
+            if ($warehouse && $wm) {
                 $mp = MovementProduct::updateOrCreate([
                     'warehouse_movement_id' => $wm->id,
                     'movement_id' => 8,
@@ -381,8 +390,10 @@ class ReportController extends Controller
             $updated_wos[] = $wo->id;
         }
 
-        if (count($updated_products) > 0 || count($updated_lots) > 0) {
-            MovementProduct::where('warehouse_id', $warehouse->id)->where('movement_id', 8)
+        if ($wm && (count($updated_products) > 0 || count($updated_lots) > 0)) {
+            MovementProduct::where('warehouse_movement_id', $wm->id)
+                ->where('warehouse_id', $warehouse->id)
+                ->where('movement_id', 8)
                 ->whereNotIn('product_id', $updated_products)
                 ->whereNotIn('lot_id', $updated_lots)
                 ->delete();
@@ -754,56 +765,67 @@ class ReportController extends Controller
             $products = $review['products'];
             $observations = $review['states']['observations'] ?? null;
 
-            // Arrays para trackear registros actualizados
-            $updated_incidents = [];
-            $updated_products = [];
-            $updated_pests = [];
             $products_data = [];
+            $now = now();
 
-            // Procesar preguntas (incidentes)
-            foreach ($questions as $question) {
-                $incident = OrderIncidents::updateOrCreate(
-                    [
-                        'order_id' => $order->id,
-                        'question_id' => $question['id'],
-                        'device_id' => $device_id
-                    ],
-                    ['answer' => $question['answer']]
-                );
-                $updated_incidents[] = $incident->id;
+            OrderIncidents::where('order_id', $order->id)
+                ->where('device_id', $device_id)
+                ->delete();
+
+            $incidentRows = collect($questions)->keyBy('id')->values()->map(function ($question) use ($order, $device_id, $now) {
+                return [
+                    'order_id' => $order->id,
+                    'question_id' => $question['id'],
+                    'device_id' => $device_id,
+                    'answer' => $question['answer'],
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            })->toArray();
+
+            if (!empty($incidentRows)) {
+                OrderIncidents::insert($incidentRows);
             }
 
-            // Procesar plagas
-            foreach ($pests as $pest) {
-                $dp = DevicePest::updateOrCreate(
-                    [
-                        'order_id' => $order->id,
-                        'device_id' => $device_id,
-                        'pest_id' => $pest['id'],
-                    ],
-                    [
-                        'total' => $pest['quantity'],
-                    ]
-                );
-                $updated_pests[] = $dp->id;
+            DevicePest::where('order_id', $order->id)
+                ->where('device_id', $device_id)
+                ->delete();
+
+            $pestRows = collect($pests)->keyBy('id')->values()->map(function ($pest) use ($order, $device_id, $now) {
+                return [
+                    'order_id' => $order->id,
+                    'device_id' => $device_id,
+                    'pest_id' => $pest['id'],
+                    'total' => $pest['quantity'],
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            })->toArray();
+
+            if (!empty($pestRows)) {
+                DevicePest::insert($pestRows);
             }
 
-            // Procesar productos
-            foreach ($products as $product) {
-                $dp = DeviceProduct::updateOrCreate(
-                    [
-                        'order_id' => $order->id,
-                        'device_id' => $device_id,
-                        'product_id' => $product['id'],
-                    ],
-                    [
-                        'application_method_id' => $product['application_method_id'],
-                        'lot_id' => $product['lot_id'],
-                        'quantity' => $product['quantity'] ?? 0,
-                        'possible_lot' => null
-                    ]
-                );
-                $updated_products[] = $dp->id;
+            DeviceProduct::where('order_id', $order->id)
+                ->where('device_id', $device_id)
+                ->delete();
+
+            $productRows = collect($products)->keyBy('id')->values()->map(function ($product) use ($order, $device_id, $now) {
+                return [
+                    'order_id' => $order->id,
+                    'device_id' => $device_id,
+                    'product_id' => $product['id'],
+                    'application_method_id' => $product['application_method_id'],
+                    'lot_id' => $product['lot_id'],
+                    'quantity' => $product['quantity'] ?? 0,
+                    'possible_lot' => null,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            })->toArray();
+
+            if (!empty($productRows)) {
+                DeviceProduct::insert($productRows);
             }
 
             DeviceStates::updateOrCreate(
@@ -817,24 +839,25 @@ class ReportController extends Controller
                 ]
             );
 
-            // Opcional: Eliminar registros que no están en los arrays actualizados
-            // (si necesitas sincronización completa)
-            $this->cleanOldRecords($order->id, $device_id, $updated_incidents, $updated_pests, $updated_products);
+            $serviceId = $order->services()->value('service.id');
+            $groupedProducts = DeviceProduct::where('order_id', $order->id)
+                ->select([
+                    'product_id',
+                    DB::raw('MIN(lot_id) as lot_id'),
+                    DB::raw('MIN(application_method_id) as application_method_id'),
+                    DB::raw('SUM(quantity) as amount'),
+                ])
+                ->groupBy('product_id')
+                ->get();
 
-            $dps = DeviceProduct::where('order_id', $order->id)->get();
-            $groupedProducts = $dps->groupBy('product_id');
-
-            foreach ($groupedProducts as $product_id => $products) {
-                $service = $order->services()->first();
-                $totalAmount = $products->sum('quantity');
-                $firstProduct = $products->first();
+            foreach ($groupedProducts as $product) {
                 $products_data[] = [
-                    'product_id' => $product_id,
-                    'service_id' => $service->id ?? null,
-                    'lot_id' => $firstProduct->lot_id,
-                    'metric_id' => $firstProduct->metric_id ?? null,
-                    'app_method_id' => $firstProduct->application_method_id,
-                    'amount' => $totalAmount,
+                    'product_id' => $product->product_id,
+                    'service_id' => $serviceId,
+                    'lot_id' => $product->lot_id,
+                    'metric_id' => null,
+                    'app_method_id' => $product->application_method_id,
+                    'amount' => $product->amount,
                 ];
             }
 
@@ -842,7 +865,9 @@ class ReportController extends Controller
             $technician = $order->closed_by ? Technician::where('user_id', $order->closed_by)->first() : null;
             $this->handleStock($order, $products_data, $technician, $user);
 
-            $order_products = OrderProduct::where('order_id', $order->id)->get();
+            $order_products = OrderProduct::with(['product', 'service', 'appMethod', 'lot', 'metric'])
+                ->where('order_id', $order->id)
+                ->get();
 
             DB::commit();
 
@@ -871,7 +896,7 @@ class ReportController extends Controller
                         ],
                         'metric' => [
                             'id' => $p->metric_id,
-                            'value' => $p->metric->value
+                            'value' => $p->metric->value ?? null
                         ],
                         'amount' => $p->amount,
                         'dosage' => $p->dosage,
@@ -2271,4 +2296,3 @@ class ReportController extends Controller
         }
     }
 }
-
