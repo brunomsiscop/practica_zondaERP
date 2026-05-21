@@ -77,7 +77,7 @@ class ReportController extends Controller
     private $file_answers_path = 'datas/json/answers.json';
     private $bulkPrint_path = 'bulk_print/';
     private const AUTOREVIEW_QUEUE_DEVICE_LIMIT = 10;
-    private const AUTOREVIEW_QUEUE_OPERATION_LIMIT = 120;
+    private const AUTOREVIEW_QUEUE_OPERATION_LIMIT = 1000;
     private const INCIDENT_QUEUE_OPERATION_LIMIT = 25;
 
 
