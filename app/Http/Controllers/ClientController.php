@@ -35,7 +35,51 @@ class ClientController extends Controller
     private $disk_type = 'google'; // Cambiar a 'google' o 'public' según necesites
 
     private $size = 50;
-    private int $directoryCacheSeconds = 30;
+
+    private function googleDriveTimingEnabled(): bool
+    {
+        return filter_var(config('filesystems.disks.google.logTiming', false), FILTER_VALIDATE_BOOLEAN);
+    }
+
+    private function googleDriveCacheMinutes(): int
+    {
+        return max((int) config('filesystems.disks.google.cacheMinutes', 10), 1);
+    }
+
+    private function shouldLogDriveTiming(): bool
+    {
+        return $this->disk_type === 'google' && $this->googleDriveTimingEnabled();
+    }
+
+    private function drivePathCacheKey(string $path, string $operation = 'listing'): string
+    {
+        return 'google_drive_path_' . md5($operation . ':' . trim($path, '/'));
+    }
+
+    private function currentRoutePath(): ?string
+    {
+        $routePath = request()->route('path');
+
+        return is_string($routePath) ? $routePath : request()->path();
+    }
+
+    private function logDriveTiming(string $operation, string $path, float $startedAt, array $context = []): void
+    {
+        if (!$this->shouldLogDriveTiming()) {
+            return;
+        }
+
+        Log::info('Google Drive timing', array_merge([
+            'operation' => $operation,
+            'path' => $path,
+            'current_route_path' => $this->currentRoutePath(),
+            'seconds' => round(microtime(true) - $startedAt, 4),
+            'files_count' => $context['files_count'] ?? null,
+            'directories_count' => $context['directories_count'] ?? null,
+            'source' => $context['source'] ?? 'drive',
+            'cache_key' => $context['cache_key'] ?? null,
+        ], $context));
+    }
 
     private function isGoogleAuthError(string $message): bool
     {
@@ -113,46 +157,106 @@ class ClientController extends Controller
 
     private function diskDirectoryExists(string $path): bool
     {
-        return $this->getDiskDriver()->directoryExists($path);
+        $startedAt = microtime(true);
+        $exists = $this->getDiskDriver()->directoryExists($path);
+
+        $this->logDriveTiming('exists.directory', $path, $startedAt, [
+            'exists' => $exists,
+            'source' => 'drive',
+        ]);
+
+        return $exists;
     }
 
     private function cachedDiskDirectoryExists(string $path): bool
     {
-        return Cache::remember(
-            'client_directory_exists:' . $this->disk_type . ':' . sha1(trim($path, '/')),
-            now()->addSeconds($this->directoryCacheSeconds),
+        if ($this->disk_type !== 'google') {
+            return $this->diskDirectoryExists($path);
+        }
+
+        $cacheKey = $this->drivePathCacheKey($path, 'exists.directory');
+        $startedAt = microtime(true);
+        $fromCache = Cache::has($cacheKey);
+
+        $exists = Cache::remember(
+            $cacheKey,
+            now()->addMinutes($this->googleDriveCacheMinutes()),
             fn() => $this->diskDirectoryExists($path)
         );
+
+        $this->logDriveTiming('exists.directory.cached', $path, $startedAt, [
+            'exists' => $exists,
+            'source' => $fromCache ? 'cache' : 'drive',
+            'cache_key' => $cacheKey,
+        ]);
+
+        return $exists;
     }
 
     private function diskFileExists(string $path): bool
     {
-        return $this->getDiskDriver()->fileExists($path);
+        $startedAt = microtime(true);
+        $exists = $this->getDiskDriver()->fileExists($path);
+
+        $this->logDriveTiming('exists.file', $path, $startedAt, [
+            'exists' => $exists,
+            'source' => 'drive',
+        ]);
+
+        return $exists;
     }
 
     private function diskCreateDirectory(string $path): void
     {
+        $startedAt = microtime(true);
         $this->getDiskDriver()->createDirectory($path);
+        $this->logDriveTiming('createDirectory', $path, $startedAt);
     }
 
     private function diskListContents(string $path, bool $recursive = false)
     {
-        return $this->getDiskDriver()->listContents($path, $recursive);
+        $startedAt = microtime(true);
+        $contents = $this->getDiskDriver()->listContents($path, $recursive);
+
+        $this->logDriveTiming('listContents', $path, $startedAt, [
+            'recursive' => $recursive,
+            'source' => 'drive',
+        ]);
+
+        return $contents;
     }
 
     private function diskWrite(string $path, string $contents): void
     {
+        $startedAt = microtime(true);
         $this->getDiskDriver()->write($path, $contents);
+        $this->logDriveTiming('write', $path, $startedAt, [
+            'bytes' => strlen($contents),
+        ]);
     }
 
     private function diskRead(string $path): string
     {
-        return $this->getDiskDriver()->read($path);
+        $startedAt = microtime(true);
+        $contents = $this->getDiskDriver()->read($path);
+        $this->logDriveTiming('get', $path, $startedAt, [
+            'bytes' => strlen($contents),
+            'source' => 'drive',
+        ]);
+
+        return $contents;
     }
 
     private function diskMimeType(string $path): string
     {
-        return $this->getDiskDriver()->mimeType($path);
+        $startedAt = microtime(true);
+        $mimeType = $this->getDiskDriver()->mimeType($path);
+        $this->logDriveTiming('mimeType', $path, $startedAt, [
+            'mime_type' => $mimeType,
+            'source' => 'drive',
+        ]);
+
+        return $mimeType;
     }
 
     private function normalizeClientSystemPath(?string $path): string
@@ -255,15 +359,14 @@ class ClientController extends Controller
     // Método para listar directorios (compatible con Flysystem v3)
     private function getDirectoriesInPath($path)
     {
-        $contents = $this->diskListContents($path, false);
+        [$directories] = $this->cachedListDirectoryContentsByType($path);
 
-        return $contents->filter(fn($item) => $item->isDir())
-            ->map(fn($item) => $item->path())
-            ->toArray();
+        return $directories;
     }
 
     private function listDirectoryContentsByType(string $path): array
     {
+        $startedAt = microtime(true);
         $directories = [];
         $files = [];
 
@@ -278,33 +381,69 @@ class ClientController extends Controller
             }
         }
 
+        $this->logDriveTiming('directories.files', $path, $startedAt, [
+            'directories_count' => count($directories),
+            'files_count' => count($files),
+            'source' => 'drive',
+        ]);
+
         return [$directories, $files];
     }
 
     private function directoryListingCacheKey(string $path): string
     {
+        if ($this->disk_type === 'google') {
+            return $this->drivePathCacheKey($path);
+        }
+
         return 'client_directory_listing:' . $this->disk_type . ':' . sha1(trim($path, '/'));
     }
 
     private function cachedListDirectoryContentsByType(string $path): array
     {
+        if ($this->disk_type !== 'google') {
+            return $this->listDirectoryContentsByType($path);
+        }
+
         $cacheKey = $this->directoryListingCacheKey($path);
         $cachedListing = Cache::get($cacheKey);
 
         if ($cachedListing !== null) {
+            $this->logDriveTiming('directories.files.cached', $path, microtime(true), [
+                'directories_count' => count($cachedListing[0] ?? []),
+                'files_count' => count($cachedListing[1] ?? []),
+                'source' => 'cache',
+                'cache_key' => $cacheKey,
+            ]);
+
             return $cachedListing;
         }
 
         $lock = Cache::lock($cacheKey . ':lock', 15);
 
         try {
-            return $lock->block(8, function () use ($cacheKey, $path) {
+            $startedAt = microtime(true);
+            $loadedFromDrive = false;
+            $listing = $lock->block(8, function () use ($cacheKey, $path, &$loadedFromDrive) {
                 return Cache::remember(
                     $cacheKey,
-                    now()->addSeconds($this->directoryCacheSeconds),
-                    fn() => $this->listDirectoryContentsByType($path)
+                    now()->addMinutes($this->googleDriveCacheMinutes()),
+                    function () use ($path, &$loadedFromDrive) {
+                        $loadedFromDrive = true;
+
+                        return $this->listDirectoryContentsByType($path);
+                    }
                 );
             });
+
+            $this->logDriveTiming('directories.files.cached', $path, $startedAt, [
+                'directories_count' => count($listing[0] ?? []),
+                'files_count' => count($listing[1] ?? []),
+                'source' => $loadedFromDrive ? 'drive' : 'cache',
+                'cache_key' => $cacheKey,
+            ]);
+
+            return $listing;
         } catch (LockTimeoutException $e) {
             Log::warning('Client directory listing lock timeout.', [
                 'path' => $path,
@@ -320,6 +459,7 @@ class ClientController extends Controller
         foreach ($paths as $path) {
             if ($path !== '') {
                 Cache::forget($this->directoryListingCacheKey($path));
+                Cache::forget($this->drivePathCacheKey($path, 'exists.directory'));
                 Cache::forget('client_directory_exists:' . $this->disk_type . ':' . sha1(trim($path, '/')));
             }
         }
@@ -328,11 +468,9 @@ class ClientController extends Controller
     // Método para listar archivos (compatible con Flysystem v3)
     private function listFiles($path)
     {
-        $contents = $this->diskListContents($path, false);
+        [, $files] = $this->cachedListDirectoryContentsByType($path);
 
-        return $contents->filter(fn($item) => $item->isFile())
-            ->map(fn($item) => $item->path())
-            ->toArray();
+        return $files;
     }
 
     // Método para listar recursivamente
@@ -566,9 +704,7 @@ class ClientController extends Controller
     {
         $directories = $files = [];
 
-        // Usar métodos adaptados
-        $local_dirs = $this->getDirectoriesInPath($path);
-        $local_files = $this->listFiles($path);
+        [$local_dirs, $local_files] = $this->cachedListDirectoryContentsByType($path);
 
         $links = $this->getBreadcrumb($path);
 
@@ -914,9 +1050,7 @@ class ClientController extends Controller
             $search_path = $contain_root ? $request->input('path') : $this->path . $request->input('path');
             $search_path = Str::finish($search_path, '/');
 
-            $disk = $this->getDisk();
-
-            if (!$this->diskDirectoryExists($search_path)) {
+            if (!$this->cachedDiskDirectoryExists($search_path)) {
                 return [];
             }
 

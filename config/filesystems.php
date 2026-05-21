@@ -73,6 +73,8 @@ return [
             'clientSecret' => env('GOOGLE_DRIVE_CLIENT_SECRET'),
             'refreshToken' => env('GOOGLE_DRIVE_REFRESH_TOKEN'),
             'folderId' => env('GOOGLE_DRIVE_FOLDER_ID'),
+            'logTiming' => env('LOG_GOOGLE_DRIVE_TIMING', false),
+            'cacheMinutes' => env('GOOGLE_DRIVE_CACHE_MINUTES', 10),
         ],
     ],
 
