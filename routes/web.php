@@ -1158,8 +1158,5 @@ require __DIR__ . '/auth.php';
 
 use App\Http\Controllers\ClientReportController_br;
 
-// Puerta 1: Para entrar a ver la pantalla del reporte y sus filtros
-Route::get('/reportes/clientes', [ClientReportController_br::class, 'index'])->name('reports.clients.index');
-
-// Puerta 2: Para recibir el formulario y procesar la descarga del Excel
-Route::post('/reportes/clientes/export', [ClientReportController_br::class, 'export'])->name('reports.clients.export');
+Route::get('/reportes/clientes', [ClientReportController_br::class, 'index'])->name('report.clients.index');
+Route::post('/reportes/clientes/export', [ClientReportController_br::class, 'export'])->name('report.clients.export');
