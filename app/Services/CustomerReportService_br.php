@@ -18,7 +18,7 @@ class CustomerReportService_br
 
         $customerTable = (new Customer())->getTable();
         $ordersTable   = (new Order())->getTable();
-
+        
         // PASO 1: Obtener IDs de clientes activos en el rango de fechas
         $activeCustomerIds = DB::table($ordersTable)
             ->whereBetween('created_at', [$start, $end])
