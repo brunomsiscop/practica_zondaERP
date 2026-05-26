@@ -59,7 +59,7 @@ Route::middleware(['auth', 'single.session'])->group(function () {
     Route::get('/dashboard', [PagesController::class, 'dashboard'])->name('dashboard');
     Route::get('/RRHH/{section}', [PagesController::class, 'rrhh'])->name('rrhh');
     Route::get('/dashboard/stock', [PagesController::class, 'stock'])->name('dashboard.stock.');
-});
+    });
 // DASHBOARD
 
 // CONTROL DE OPERACIONES
@@ -1155,3 +1155,8 @@ Route::get('/google-drive/test', [GoogleDriveController::class, 'testConnection'
     ->name('google.drive.test');
 
 require __DIR__ . '/auth.php';
+
+use App\Http\Controllers\ClientReportController_br;
+
+Route::get('/reportes/clientes', [ClientReportController_br::class, 'index'])->name('report.clients.index');
+Route::post('/reportes/clientes/export', [ClientReportController_br::class, 'export'])->name('report.clients.export');
