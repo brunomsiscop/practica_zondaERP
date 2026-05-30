@@ -41,6 +41,8 @@ use App\Http\Controllers\ManualQuotationController;
 use App\Http\Controllers\DailyTrackingController;
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ClientReportController;
+
 
 /*Route::get('/', function () {
     return view('/auth/login');
@@ -1154,9 +1156,10 @@ Route::get('/google-drive/callback', [GoogleDriveController::class, 'handleGoogl
 Route::get('/google-drive/test', [GoogleDriveController::class, 'testConnection'])
     ->name('google.drive.test');
 
+    Route::get('/reportes/clientes', [ClientReportController::class, 'index'])
+    ->name('report.client.index');
+
+    Route::post('/reportes/clientes/export', [ClientReportController::class, 'export'])
+    ->name('report.client.export');
+
 require __DIR__ . '/auth.php';
-
-use App\Http\Controllers\ClientReportController_br;
-
-Route::get('/reportes/clientes', [ClientReportController_br::class, 'index'])->name('report.clients.index');
-Route::post('/reportes/clientes/export', [ClientReportController_br::class, 'export'])->name('report.clients.export');
